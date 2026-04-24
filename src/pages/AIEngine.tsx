@@ -78,21 +78,18 @@ const confidenceColors: Record<Output["confidence"], string> = {
 
 const AIEngine = () => {
   const [isGuest, setIsGuest] = useState(false);
-  const [input, setInput] = useState("Access cavity completed on tooth 36");
+  const [input, setInput] = useState("");
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const guest = localStorage.getItem("guestMode") === "true";
     setIsGuest(guest);
-    if (!guest) {
-      setOutput(procedures["access cavity"]);
-    }
   }, []);
 
   const handleSuggest = () => {
     if (!input.trim()) {
-      toast.error("Please enter a clinical condition");
+      toast.error("Please enter a clinical condition or your thoughts");
       return;
     }
 
@@ -116,16 +113,16 @@ const AIEngine = () => {
   return (
     <div className="space-y-5 animate-fade-up">
       <p className="text-sm text-muted-foreground">
-        Enter the current step or condition — get the next clinically validated move.
+        Share your clinical findings or the current procedure step to get AI-validated guidance.
       </p>
 
       <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Current step / condition</Label>
-        <Input
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Clinical thoughts / condition</Label>
+        <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. Access cavity completed"
-          className="rounded-xl h-11"
+          placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
+          className="w-full min-h-[120px] rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-smooth"
         />
         <Button
           variant="hero"
@@ -135,7 +132,7 @@ const AIEngine = () => {
           disabled={loading}
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-          Suggest next step
+          Get AI Guidance
         </Button>
       </Card>
 

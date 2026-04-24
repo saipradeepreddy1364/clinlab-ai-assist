@@ -1,20 +1,16 @@
-import { useState } from "react";
-import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 type FileItem = { name: string; size: string; tag: string; progress: number; type: "img" | "pdf" | "doc" | "zip" };
 
 const tags = ["X-ray", "Prescription", "Lab Report", "Other"];
-
-const initial: FileItem[] = [
-  { name: "IOPA_36_preop.jpg", size: "1.2 MB", tag: "X-ray", progress: 100, type: "img" },
-  { name: "Crown_LabReq.pdf", size: "248 KB", tag: "Lab Report", progress: 100, type: "pdf" },
-  { name: "Patient_history.docx", size: "84 KB", tag: "Other", progress: 64, type: "doc" },
-];
 
 const iconMap = {
   img: ImageIcon,
@@ -24,8 +20,60 @@ const iconMap = {
 };
 
 const Uploads = () => {
-  const [files, setFiles] = useState<FileItem[]>(initial);
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [drag, setDrag] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    const fetchFiles = async () => {
+      const isGuest = localStorage.getItem("guestMode") === "true";
+      if (isGuest) {
+        setFiles([]);
+        setLoading(false);
+        return;
+      }
+
+      // Simulation of fetching metadata from a hypothetical 'files' table
+      // In a real app, you'd store file metadata in DB and actual file in Storage
+      setLoading(false);
+    };
+
+    fetchFiles();
+  }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    setUploading(true);
+    const newFiles: FileItem[] = Array.from(selectedFiles).map(f => ({
+      name: f.name,
+      size: `${(f.size / 1024 / 1024).toFixed(1)} MB`,
+      tag: "Other",
+      progress: 0,
+      type: f.type.includes("image") ? "img" : f.type.includes("pdf") ? "pdf" : "doc"
+    }));
+
+    setFiles(prev => [...newFiles, ...prev]);
+
+    // Simulate upload progress for each file
+    for (let i = 0; i < newFiles.length; i++) {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        setFiles(prev => prev.map((f, idx) => 
+          idx === i ? { ...f, progress: Math.min(progress, 100) } : f
+        ));
+        if (progress >= 100) {
+          clearInterval(interval);
+        }
+      }, 100);
+    }
+
+    toast.success("Files uploaded successfully (simulation)");
+    setUploading(false);
+  };
 
   return (
     <div className="space-y-5 animate-fade-up">
@@ -42,24 +90,25 @@ const Uploads = () => {
           setDrag(false);
         }}
         className={cn(
-          "rounded-2xl border-2 border-dashed p-6 text-center transition-smooth",
+          "relative rounded-2xl border-2 border-dashed p-6 text-center transition-smooth",
           drag ? "border-primary bg-primary/5" : "border-border bg-card"
         )}
       >
+        <input
+          type="file"
+          multiple
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          onChange={handleFileUpload}
+          disabled={uploading}
+        />
         <div className="w-12 h-12 rounded-2xl gradient-soft flex items-center justify-center mx-auto mb-3">
-          <Upload className="w-5 h-5 text-primary" />
+          {uploading ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : <Upload className="w-5 h-5 text-primary" />}
         </div>
         <h3 className="font-display font-semibold text-base">Drop files or browse</h3>
         <p className="text-xs text-muted-foreground mt-1">Up to 25 files at once</p>
-        <Button variant="hero" size="lg" className="w-full mt-4">
-          <Upload className="w-4 h-4" /> Upload files
+        <Button variant="hero" size="lg" className="w-full mt-4 pointer-events-none">
+          {uploading ? "Uploading..." : "Select files"}
         </Button>
-        <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground flex-wrap">
-          <Badge variant="outline" className="rounded-full text-[10px]">PDF</Badge>
-          <Badge variant="outline" className="rounded-full text-[10px]">JPG/PNG</Badge>
-          <Badge variant="outline" className="rounded-full text-[10px]">DOCX</Badge>
-          <Badge variant="outline" className="rounded-full text-[10px]">ZIP</Badge>
-        </div>
       </div>
 
       <Card className="rounded-2xl shadow-card border-border/60 overflow-hidden">
@@ -68,40 +117,51 @@ const Uploads = () => {
           <span className="text-xs text-muted-foreground">{files.length} files</span>
         </div>
         <div className="divide-y divide-border">
-          {files.map((f, i) => {
-            const Icon = iconMap[f.type];
-            return (
-              <div key={i} className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-medium truncate">{f.name}</p>
-                    <Badge variant="outline" className="rounded-full text-xs">{f.tag}</Badge>
+          {loading ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+              <p className="text-xs">Fetching files...</p>
+            </div>
+          ) : files.length > 0 ? (
+            files.map((f, i) => {
+              const Icon = iconMap[f.type] || FileText;
+              return (
+                <div key={i} className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <Progress value={f.progress} className="h-1.5 flex-1" />
-                    <span className="text-xs text-muted-foreground w-16 text-right">
-                      {f.progress < 100 ? `${f.progress}%` : f.size}
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium truncate">{f.name}</p>
+                      <Badge variant="outline" className="rounded-full text-xs">{f.tag}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Progress value={f.progress} className="h-1.5 flex-1" />
+                      <span className="text-xs text-muted-foreground w-16 text-right">
+                        {f.progress < 100 ? `${f.progress}%` : f.size}
+                      </span>
+                    </div>
                   </div>
+                  {f.progress === 100 ? (
+                    <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => setFiles((p) => p.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
-                {f.progress === 100 ? (
-                  <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full"
-                    onClick={() => setFiles((p) => p.filter((_, idx) => idx !== i))}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="p-12 text-center text-muted-foreground">
+              <p className="text-sm">No files uploaded yet.</p>
+            </div>
+          )}
         </div>
       </Card>
 
