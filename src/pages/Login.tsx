@@ -1,11 +1,39 @@
-import { Stethoscope } from "lucide-react";
+import { Stethoscope, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast.success("Welcome back!");
+      navigate("/");
+    } catch (error: any) {
+      toast.error(error.message || "Invalid login credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Left visual */}
@@ -43,16 +71,18 @@ const Login = () => {
             <p className="text-muted-foreground mt-2">Sign in to continue your clinical workflow.</p>
           </div>
 
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              navigate("/");
-            }}
-          >
+          <form className="space-y-4" onSubmit={handleLogin}>
             <div className="space-y-2">
-              <Label htmlFor="email">Email or phone</Label>
-              <Input id="email" placeholder="dr.singh@clinic.com" className="rounded-xl h-11" />
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="dr.singh@clinic.com"
+                className="rounded-xl h-11"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -61,9 +91,18 @@ const Login = () => {
                   Forgot?
                 </button>
               </div>
-              <Input id="password" type="password" placeholder="••••••••" className="rounded-xl h-11" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                className="rounded-xl h-11"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full">
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Sign in
             </Button>
             <Button
