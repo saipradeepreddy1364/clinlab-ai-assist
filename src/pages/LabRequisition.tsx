@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download, Printer, Send, ClipboardList } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 const labOptions = [
   { id: "crown", label: "Crown" },
@@ -19,8 +20,20 @@ const labOptions = [
 
 const LabRequisition = () => {
   const [selected, setSelected] = useState<string[]>(["crown"]);
+  const [dentistName, setDentistName] = useState("Dr. Aarav Singh");
+  
   const toggle = (id: string) =>
     setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.full_name) {
+        setDentistName(user.user_metadata.full_name);
+      }
+    };
+    fetchUser();
+  }, []);
 
   return (
     <div className="space-y-5 animate-fade-up">
@@ -31,7 +44,7 @@ const LabRequisition = () => {
           <p className="text-[10px] uppercase tracking-wider opacity-80">Lab requisition #LR-2041</p>
           <h2 className="font-display text-lg font-bold mt-1">Crown — Tooth 36</h2>
           <div className="flex items-center justify-between text-xs opacity-90 mt-2">
-            <span>24 Apr 2026</span>
+            <span>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
             <span>Return: 5–7 days</span>
           </div>
         </div>
@@ -54,7 +67,11 @@ const LabRequisition = () => {
             </div>
             <div className="space-y-2">
               <Label>Dentist</Label>
-              <Input defaultValue="Dr. Aarav Singh" className="rounded-xl h-11" />
+              <Input 
+                value={dentistName} 
+                onChange={(e) => setDentistName(e.target.value)}
+                className="rounded-xl h-11" 
+              />
             </div>
             <div className="space-y-2">
               <Label>Tooth number (FDI)</Label>

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   Signal,
   Wifi,
   BatteryFull,
+  LogOut,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { Button } from "./ui/button";
@@ -40,6 +42,30 @@ const AppLayout = () => {
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login");
+      }
+    };
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        navigate("/login");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+    toast.success("Signed out successfully");
+  };
 
   const isHome = location.pathname === "/";
   const isDetail = location.pathname.startsWith("/patients/") && location.pathname !== "/patients";
@@ -95,6 +121,9 @@ const AppLayout = () => {
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={toggle} className="rounded-full h-9 w-9">
               {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-full h-9 w-9 text-muted-foreground">
+              <LogOut className="w-4 h-4" />
             </Button>
             <button className="relative w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-smooth">
               <Bell className="w-4 h-4" />

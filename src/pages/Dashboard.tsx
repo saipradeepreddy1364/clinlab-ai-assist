@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   FilePlus2,
   ClipboardList,
@@ -12,6 +13,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 
 const actions = [
   { to: "/new-case", title: "New Case", desc: "Start clinical entry", icon: FilePlus2, tint: "bg-primary/10 text-primary" },
@@ -20,13 +22,56 @@ const actions = [
   { to: "/patients", title: "Records", desc: "Browse case history", icon: Users, tint: "bg-warning/10 text-warning" },
 ];
 
-const recentCases = [
-  { id: "C-2041", name: "Priya Sharma", tooth: "36", dx: "Irreversible Pulpitis", urgent: false },
-  { id: "C-2039", name: "Aisha Khan", tooth: "46", dx: "Acute Apical Abscess", urgent: true },
-  { id: "C-2040", name: "Rohan Mehta", tooth: "11", dx: "Crown Prep — PFM", urgent: false },
-];
-
 const Dashboard = () => {
+  const [userName, setUserName] = useState("Doctor");
+  const [greeting, setGreeting] = useState("Good morning");
+  const [stats, setStats] = useState({
+    active: 12,
+    labPending: 5,
+    urgent: 1,
+  });
+  const [recentCases, setRecentCases] = useState<any[]>([
+    { id: "C-2041", name: "Priya Sharma", tooth: "36", dx: "Irreversible Pulpitis", urgent: false },
+    { id: "C-2039", name: "Aisha Khan", tooth: "46", dx: "Acute Apical Abscess", urgent: true },
+    { id: "C-2040", name: "Rohan Mehta", tooth: "11", dx: "Crown Prep — PFM", urgent: false },
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserName(user.user_metadata.full_name || "Doctor");
+        
+        // Fetch cases for this user
+        const { data: cases, error } = await supabase
+          .from('cases')
+          .select('*')
+          .eq('doctor_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!error && cases && cases.length > 0) {
+          setRecentCases(cases.slice(0, 3));
+          setStats({
+            active: cases.filter(c => c.status === 'in-progress').length,
+            labPending: cases.filter(c => c.status === 'lab-sent').length,
+            urgent: cases.filter(c => c.is_urgent).length,
+          });
+        }
+      }
+      setLoading(false);
+    };
+
+    // Greeting logic
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
+
+    fetchData();
+  }, []);
+
   return (
     <div className="space-y-6 animate-fade-up">
       {/* Hero greeting */}
@@ -37,9 +82,11 @@ const Dashboard = () => {
           <Badge className="bg-white/20 text-primary-foreground hover:bg-white/30 border-0 backdrop-blur text-[10px] mb-2">
             <Activity className="w-2.5 h-2.5 mr-1" /> Today
           </Badge>
-          <h2 className="font-display text-xl font-bold leading-snug">Good morning, Dr. Singh</h2>
+          <h2 className="font-display text-xl font-bold leading-snug">
+            {greeting}, Dr. {userName.split(" ").pop()}
+          </h2>
           <p className="text-primary-foreground/85 text-sm mt-1">
-            4 active cases · 2 lab requests pending
+            {stats.active} active cases · {stats.labPending} lab requests pending
           </p>
           <div className="flex gap-2 mt-4">
             <Link to="/new-case" className="flex-1">
@@ -59,9 +106,9 @@ const Dashboard = () => {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2.5">
         {[
-          { label: "Active", value: "12", tint: "text-primary", icon: Activity },
-          { label: "Lab", value: "5", tint: "text-secondary", icon: ClipboardList },
-          { label: "Urgent", value: "1", tint: "text-urgent", icon: AlertCircle },
+          { label: "Active", value: stats.active, tint: "text-primary", icon: Activity },
+          { label: "Lab", value: stats.labPending, tint: "text-secondary", icon: ClipboardList },
+          { label: "Urgent", value: stats.urgent, tint: "text-urgent", icon: AlertCircle },
         ].map((s) => (
           <Card key={s.label} className="p-3 rounded-2xl shadow-card border-border/60">
             <s.icon className={`w-4 h-4 ${s.tint} mb-2`} />

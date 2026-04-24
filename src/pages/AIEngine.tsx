@@ -7,12 +7,14 @@ import {
   Wrench,
   FlaskConical,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 type Output = {
   diagnosis: string;
@@ -23,25 +25,49 @@ type Output = {
   alerts: string[];
 };
 
-const sample: Output = {
-  diagnosis: "Irreversible Pulpitis — Tooth 36",
-  confidence: "High",
-  steps: [
-    "Locate all canals (MB, ML, DB, DL) under magnification",
-    "Establish glide path with #10 K-file to working length",
-    "Select initial rotary file (ProTaper SX → S1)",
-    "Begin irrigation protocol: 3% NaOCl, EDTA 17%, saline rinse",
-    "Determine working length with apex locator + IOPA confirmation",
-  ],
-  instruments: [
-    "DG-16 endodontic explorer",
-    "Endo-Z bur",
-    "K-files #10–#25",
-    "Rotary endomotor",
-    "Apex locator",
-  ],
-  materials: ["3% Sodium Hypochlorite", "17% EDTA", "Saline", "Calcium hydroxide (intracanal)"],
-  alerts: ["Verify rubber dam isolation before irrigation.", "Avoid binding files past WL — risk of perforation."],
+const procedures: Record<string, Output> = {
+  "access cavity": {
+    diagnosis: "Irreversible Pulpitis — Tooth 36",
+    confidence: "High",
+    steps: [
+      "Locate all canals (MB, ML, DB, DL) under magnification",
+      "Establish glide path with #10 K-file to working length",
+      "Select initial rotary file (ProTaper SX → S1)",
+      "Begin irrigation protocol: 3% NaOCl, EDTA 17%, saline rinse",
+      "Determine working length with apex locator + IOPA confirmation",
+    ],
+    instruments: ["DG-16 endodontic explorer", "Endo-Z bur", "K-files #10–#25", "Rotary endomotor", "Apex locator"],
+    materials: ["3% Sodium Hypochlorite", "17% EDTA", "Saline", "Calcium hydroxide (intracanal)"],
+    alerts: ["Verify rubber dam isolation before irrigation.", "Avoid binding files past WL — risk of perforation."],
+  },
+  "crown prep": {
+    diagnosis: "Crown Preparation — Tooth 11",
+    confidence: "High",
+    steps: [
+      "Select appropriate diamond burs (tapered chamfer)",
+      "Reduce occlusal surface by 1.5mm - 2.0mm",
+      "Prepare axial walls with 6-degree taper",
+      "Refine gingival finish line (chamfer)",
+      "Take final impression using PVS material",
+    ],
+    instruments: ["High-speed handpiece", "Diamond burs", "Retraction cord", "Impression trays"],
+    materials: ["PVS impression material", "Retraction solution", "Temporary cement"],
+    alerts: ["Ensure adequate clearance for material thickness.", "Protect adjacent teeth with metal matrix."],
+  },
+  "extraction": {
+    diagnosis: "Non-restorable Caries — Tooth 46",
+    confidence: "High",
+    steps: [
+      "Administer local anesthesia (IANB + Long Buccal)",
+      "Sever periodontal ligament using periotome",
+      "Luxate tooth with straight elevator",
+      "Engage tooth with appropriate forceps (Lower molar)",
+      "Debride socket and verify hemostasis",
+    ],
+    instruments: ["Periotome", "Straight elevator", "Molar forceps", "Curette"],
+    materials: ["Local Anesthetic (Articaine 4%)", "Gauze", "Gelfoam (if needed)"],
+    alerts: ["Monitor patient vitals.", "Warn patient about post-op numbness."],
+  },
 };
 
 const confidenceColors: Record<Output["confidence"], string> = {
@@ -51,7 +77,32 @@ const confidenceColors: Record<Output["confidence"], string> = {
 };
 
 const AIEngine = () => {
-  const [output, setOutput] = useState<Output | null>(sample);
+  const [input, setInput] = useState("Access cavity completed on tooth 36");
+  const [output, setOutput] = useState<Output | null>(procedures["access cavity"]);
+  const [loading, setLoading] = useState(false);
+
+  const handleSuggest = () => {
+    if (!input.trim()) {
+      toast.error("Please enter a clinical condition");
+      return;
+    }
+
+    setLoading(true);
+    setTimeout(() => {
+      const lowerInput = input.toLowerCase();
+      let match = procedures["access cavity"];
+
+      if (lowerInput.includes("crown") || lowerInput.includes("prep")) {
+        match = procedures["crown prep"];
+      } else if (lowerInput.includes("extract") || lowerInput.includes("remove")) {
+        match = procedures["extraction"];
+      }
+
+      setOutput(match);
+      setLoading(false);
+      toast.success("AI suggestion generated!");
+    }, 1500);
+  };
 
   return (
     <div className="space-y-5 animate-fade-up">
@@ -62,21 +113,24 @@ const AIEngine = () => {
       <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
         <Label className="text-xs uppercase tracking-wider text-muted-foreground">Current step / condition</Label>
         <Input
-          defaultValue="Access cavity completed on tooth 36"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="e.g. Access cavity completed"
           className="rounded-xl h-11"
         />
         <Button
           variant="hero"
           size="lg"
-          onClick={() => setOutput(sample)}
+          onClick={handleSuggest}
           className="w-full"
+          disabled={loading}
         >
-          <Sparkles className="w-4 h-4" /> Suggest next step
+          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+          Suggest next step
         </Button>
       </Card>
 
-      {output && (
+      {output && !loading && (
         <div className="space-y-4 animate-fade-up">
           {/* Diagnosis card */}
           <Card className="rounded-2xl p-4 border-2 border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 shadow-glow">
