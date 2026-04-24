@@ -25,22 +25,19 @@ const NewCase = () => {
     setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-4xl">
-      <div>
-        <h1 className="font-display text-3xl font-bold">New case entry</h1>
-        <p className="text-muted-foreground mt-1">Capture clinical findings — AI will structure the rest.</p>
-      </div>
+    <div className="space-y-5 animate-fade-up">
+      <p className="text-sm text-muted-foreground">Capture clinical findings — AI will structure the rest.</p>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           navigate("/ai-engine");
         }}
-        className="space-y-6"
+        className="space-y-5"
       >
-        <Card className="rounded-2xl p-6 shadow-card border-border/60 space-y-5">
-          <h2 className="font-display font-semibold text-lg">Patient details</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
+        <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-4">
+          <h2 className="font-display font-semibold text-sm uppercase tracking-wider text-muted-foreground">Patient details</h2>
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-2">
               <Label>Patient name</Label>
               <Input placeholder="e.g. Priya Sharma" className="rounded-xl h-11" />
@@ -75,8 +72,8 @@ const NewCase = () => {
           </div>
         </Card>
 
-        <Card className="rounded-2xl p-6 shadow-card border-border/60 space-y-5">
-          <h2 className="font-display font-semibold text-lg">Symptoms</h2>
+        <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
+          <h2 className="font-display font-semibold text-sm uppercase tracking-wider text-muted-foreground">Symptoms</h2>
           <div className="flex flex-wrap gap-2">
             {symptomOptions.map((s) => {
               const active = symptoms.includes(s);
@@ -100,24 +97,24 @@ const NewCase = () => {
           </div>
         </Card>
 
-        <Card className="rounded-2xl p-6 shadow-card border-border/60 space-y-5">
+        <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display font-semibold text-lg">Clinical notes</h2>
-            <Button type="button" variant="outline" size="sm" className="rounded-full gap-2">
-              <Mic className="w-4 h-4" /> Voice
+            <h2 className="font-display font-semibold text-sm uppercase tracking-wider text-muted-foreground">Clinical notes</h2>
+            <Button type="button" variant="outline" size="sm" className="rounded-full gap-1.5 h-8 text-xs">
+              <Mic className="w-3.5 h-3.5" /> Voice
             </Button>
           </div>
           <Textarea
             placeholder="e.g. Spontaneous throbbing pain, lingering response to cold test on 36. Tender on percussion. No swelling."
-            className="rounded-xl min-h-32 resize-none"
+            className="rounded-xl min-h-28 resize-none text-sm"
           />
         </Card>
 
-        <div className="flex gap-3 sticky bottom-20 lg:bottom-6 z-20">
-          <Button type="button" variant="outline" size="lg" className="rounded-xl flex-1 sm:flex-initial">
-            Save draft
+        <div className="flex gap-2 pt-1">
+          <Button type="button" variant="outline" size="lg" className="rounded-xl flex-1">
+            Draft
           </Button>
-          <Button type="submit" variant="hero" size="lg" className="flex-1">
+          <Button type="submit" variant="hero" size="lg" className="flex-[2]">
             <Sparkles className="w-4 h-4" /> Analyze with AI
           </Button>
         </div>

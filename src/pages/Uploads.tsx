@@ -28,13 +28,8 @@ const Uploads = () => {
   const [drag, setDrag] = useState(false);
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-4xl">
-      <div>
-        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-          <Upload className="w-7 h-7 text-primary" /> File uploads
-        </h1>
-        <p className="text-muted-foreground mt-1">PDF · Images · DOCX · ZIP — bulk supported, auto-linked to patient.</p>
-      </div>
+    <div className="space-y-5 animate-fade-up">
+      <p className="text-sm text-muted-foreground">PDF · Images · DOCX · ZIP — bulk supported, auto-linked to patient.</p>
 
       <div
         onDragOver={(e) => {
@@ -47,31 +42,29 @@ const Uploads = () => {
           setDrag(false);
         }}
         className={cn(
-          "rounded-2xl border-2 border-dashed p-10 text-center transition-smooth",
+          "rounded-2xl border-2 border-dashed p-6 text-center transition-smooth",
           drag ? "border-primary bg-primary/5" : "border-border bg-card"
         )}
       >
-        <div className="w-14 h-14 rounded-2xl gradient-soft flex items-center justify-center mx-auto mb-4">
-          <Upload className="w-6 h-6 text-primary" />
+        <div className="w-12 h-12 rounded-2xl gradient-soft flex items-center justify-center mx-auto mb-3">
+          <Upload className="w-5 h-5 text-primary" />
         </div>
-        <h3 className="font-display font-semibold text-lg">Drop files here</h3>
-        <p className="text-sm text-muted-foreground mt-1">or click to browse — up to 25 files at once</p>
-        <div className="flex flex-wrap gap-2 justify-center mt-5">
-          <Button variant="hero" size="lg">
-            <Upload className="w-4 h-4" /> Upload multiple files
-          </Button>
-        </div>
-        <div className="flex items-center justify-center gap-4 mt-5 text-xs text-muted-foreground">
-          <Badge variant="outline" className="rounded-full">PDF</Badge>
-          <Badge variant="outline" className="rounded-full">JPG / PNG</Badge>
-          <Badge variant="outline" className="rounded-full">DOCX</Badge>
-          <Badge variant="outline" className="rounded-full">ZIP</Badge>
+        <h3 className="font-display font-semibold text-base">Drop files or browse</h3>
+        <p className="text-xs text-muted-foreground mt-1">Up to 25 files at once</p>
+        <Button variant="hero" size="lg" className="w-full mt-4">
+          <Upload className="w-4 h-4" /> Upload files
+        </Button>
+        <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground flex-wrap">
+          <Badge variant="outline" className="rounded-full text-[10px]">PDF</Badge>
+          <Badge variant="outline" className="rounded-full text-[10px]">JPG/PNG</Badge>
+          <Badge variant="outline" className="rounded-full text-[10px]">DOCX</Badge>
+          <Badge variant="outline" className="rounded-full text-[10px]">ZIP</Badge>
         </div>
       </div>
 
       <Card className="rounded-2xl shadow-card border-border/60 overflow-hidden">
-        <div className="p-5 border-b border-border flex items-center justify-between">
-          <h3 className="font-display font-semibold">Recent uploads</h3>
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <h3 className="font-display font-semibold text-sm uppercase tracking-wider text-muted-foreground">Recent uploads</h3>
           <span className="text-xs text-muted-foreground">{files.length} files</span>
         </div>
         <div className="divide-y divide-border">
