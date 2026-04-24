@@ -8,7 +8,15 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
-type FileItem = { name: string; size: string; tag: string; progress: number; type: "img" | "pdf" | "doc" | "zip" };
+type FileItem = { 
+  id: string;
+  name: string; 
+  size: string; 
+  tag: string; 
+  progress: number; 
+  type: "img" | "pdf" | "doc" | "zip";
+  path: string;
+};
 
 const tags = ["X-ray", "Prescription", "Lab Report", "Other"];
 
@@ -34,8 +42,24 @@ const Uploads = () => {
         return;
       }
 
-      // Simulation of fetching metadata from a hypothetical 'files' table
-      // In a real app, you'd store file metadata in DB and actual file in Storage
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase.storage
+          .from('clinical-files')
+          .list(user.id);
+
+        if (!error && data) {
+          setFiles(data.map(f => ({
+            id: f.id,
+            name: f.name,
+            size: `${(f.metadata.size / 1024 / 1024).toFixed(1)} MB`,
+            tag: "Other",
+            progress: 100,
+            type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : f.name.match(/\.pdf$/i) ? "pdf" : "doc",
+            path: `${user.id}/${f.name}`
+          })));
+        }
+      }
       setLoading(false);
     };
 
@@ -47,32 +71,63 @@ const Uploads = () => {
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     setUploading(true);
-    const newFiles: FileItem[] = Array.from(selectedFiles).map(f => ({
-      name: f.name,
-      size: `${(f.size / 1024 / 1024).toFixed(1)} MB`,
-      tag: "Other",
-      progress: 0,
-      type: f.type.includes("image") ? "img" : f.type.includes("pdf") ? "pdf" : "doc"
-    }));
-
-    setFiles(prev => [...newFiles, ...prev]);
-
-    // Simulate upload progress for each file
-    for (let i = 0; i < newFiles.length; i++) {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { ...f, progress: Math.min(progress, 100) } : f
-        ));
-        if (progress >= 100) {
-          clearInterval(interval);
-        }
-      }, 100);
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("You must be logged in to upload files");
+      setUploading(false);
+      return;
     }
 
-    toast.success("Files uploaded successfully (simulation)");
+    for (const file of Array.from(selectedFiles)) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${file.name}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const newFileItem: FileItem = {
+        id: Math.random().toString(),
+        name: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+        tag: "Other",
+        progress: 10,
+        type: file.type.includes("image") ? "img" : file.type.includes("pdf") ? "pdf" : "doc",
+        path: filePath
+      };
+
+      setFiles(prev => [newFileItem, ...prev]);
+
+      try {
+        const { error } = await supabase.storage
+          .from('clinical-files')
+          .upload(filePath, file);
+
+        if (error) throw error;
+
+        setFiles(prev => prev.map(f => 
+          f.path === filePath ? { ...f, progress: 100 } : f
+        ));
+        toast.success(`${file.name} uploaded!`);
+      } catch (error: any) {
+        toast.error(`Error uploading ${file.name}: ${error.message}`);
+        setFiles(prev => prev.filter(f => f.path !== filePath));
+      }
+    }
     setUploading(false);
+  };
+
+  const handleDelete = async (file: FileItem) => {
+    try {
+      const { error } = await supabase.storage
+        .from('clinical-files')
+        .remove([file.path]);
+
+      if (error) throw error;
+
+      setFiles(prev => prev.filter(f => f.path !== file.path));
+      toast.success("File removed");
+    } catch (error: any) {
+      toast.error(`Error removing file: ${error.message}`);
+    }
   };
 
   return (
@@ -126,7 +181,7 @@ const Uploads = () => {
             files.map((f, i) => {
               const Icon = iconMap[f.type] || FileText;
               return (
-                <div key={i} className="p-4 flex items-center gap-3">
+                <div key={i} className="p-4 flex items-center gap-3 group">
                   <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
                     <Icon className="w-4 h-4 text-primary" />
                   </div>
@@ -142,18 +197,14 @@ const Uploads = () => {
                       </span>
                     </div>
                   </div>
-                  {f.progress === 100 ? (
-                    <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => setFiles((p) => p.filter((_, idx) => idx !== i))}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(f)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
               );
             })
@@ -164,6 +215,36 @@ const Uploads = () => {
           )}
         </div>
       </Card>
+
+      <Card className="p-4 rounded-2xl bg-accent/5 border-accent/20">
+        <h4 className="font-display font-semibold text-sm text-accent mb-2">Why upload X-rays & reports?</h4>
+        <ul className="space-y-2 text-xs text-muted-foreground">
+          <li className="flex gap-2">
+            <span className="text-accent">•</span>
+            <span><strong>Clinical Accuracy:</strong> AI uses visual data to validate clinical findings and suggest precise next steps.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-accent">•</span>
+            <span><strong>Lab Precision:</strong> Providing pre-op X-rays to dental labs ensures better fit and aesthetics for restorations.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-accent">•</span>
+            <span><strong>Case History:</strong> Maintains a complete digital record for future reference and patient follow-ups.</span>
+          </li>
+        </ul>
+      </Card>
+
+      <div className="text-xs text-muted-foreground pb-4">
+        Tag uploads as: {tags.map((t) => (
+          <Badge key={t} variant="outline" className="rounded-full mr-1.5 text-xs">
+            {t}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+};
+rd>
 
       <Card className="p-4 rounded-2xl bg-accent/5 border-accent/20">
         <h4 className="font-display font-semibold text-sm text-accent mb-2">Why upload X-rays & reports?</h4>
