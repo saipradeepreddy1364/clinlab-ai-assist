@@ -20,6 +20,8 @@ import {
 import { useTheme } from "./ThemeProvider";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const tabs = [
   { to: "/", label: "Home", icon: LayoutDashboard, end: true },
