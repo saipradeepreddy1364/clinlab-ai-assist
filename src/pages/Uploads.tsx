@@ -244,35 +244,5 @@ const Uploads = () => {
     </div>
   );
 };
-rd>
-
-      <Card className="p-4 rounded-2xl bg-accent/5 border-accent/20">
-        <h4 className="font-display font-semibold text-sm text-accent mb-2">Why upload X-rays & reports?</h4>
-        <ul className="space-y-2 text-xs text-muted-foreground">
-          <li className="flex gap-2">
-            <span className="text-accent">•</span>
-            <span><strong>Clinical Accuracy:</strong> AI uses visual data to validate clinical findings and suggest precise next steps.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-accent">•</span>
-            <span><strong>Lab Precision:</strong> Providing pre-op X-rays to dental labs ensures better fit and aesthetics for restorations.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-accent">•</span>
-            <span><strong>Case History:</strong> Maintains a complete digital record for future reference and patient follow-ups.</span>
-          </li>
-        </ul>
-      </Card>
-
-      <div className="text-xs text-muted-foreground pb-4">
-        Tag uploads as: {tags.map((t) => (
-          <Badge key={t} variant="outline" className="rounded-full mr-1.5 text-xs">
-            {t}
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export default Uploads;
