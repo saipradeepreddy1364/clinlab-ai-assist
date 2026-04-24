@@ -47,15 +47,18 @@ const AppLayout = () => {
 
   useEffect(() => {
     const checkUser = async () => {
+      const isGuest = localStorage.getItem("guestMode") === "true";
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      
+      if (!session && !isGuest) {
         navigate("/login");
       }
     };
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
+      const isGuest = localStorage.getItem("guestMode") === "true";
+      if (!session && !isGuest) {
         navigate("/login");
       }
     });
@@ -64,6 +67,7 @@ const AppLayout = () => {
   }, [navigate]);
 
   const handleLogout = async () => {
+    localStorage.removeItem("guestMode");
     await supabase.auth.signOut();
     navigate("/login");
     toast.success("Signed out successfully");
@@ -83,7 +87,7 @@ const AppLayout = () => {
         className={cn(
           "relative w-full bg-background flex flex-col overflow-hidden",
           // Phone-shape on md+, fullscreen on mobile
-          "min-h-screen md:min-h-0 md:h-[860px] md:max-h-[92vh] md:w-[420px]",
+          "h-screen md:h-[860px] md:max-h-[92vh] md:w-[420px]",
           "md:rounded-[2.75rem] md:border md:border-border md:shadow-elevated"
         )}
       >

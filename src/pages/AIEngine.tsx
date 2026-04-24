@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sparkles,
   CheckCircle2,
@@ -77,9 +77,18 @@ const confidenceColors: Record<Output["confidence"], string> = {
 };
 
 const AIEngine = () => {
+  const [isGuest, setIsGuest] = useState(false);
   const [input, setInput] = useState("Access cavity completed on tooth 36");
-  const [output, setOutput] = useState<Output | null>(procedures["access cavity"]);
+  const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const guest = localStorage.getItem("guestMode") === "true";
+    setIsGuest(guest);
+    if (!guest) {
+      setOutput(procedures["access cavity"]);
+    }
+  }, []);
 
   const handleSuggest = () => {
     if (!input.trim()) {

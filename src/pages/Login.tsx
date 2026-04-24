@@ -118,7 +118,10 @@ const Login = () => {
               variant="outline"
               size="lg"
               className="w-full rounded-xl"
-              onClick={() => navigate("/")}
+              onClick={() => {
+                localStorage.setItem("guestMode", "true");
+                navigate("/");
+              }}
             >
               Continue as guest
             </Button>

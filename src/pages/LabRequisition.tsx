@@ -20,7 +20,7 @@ const labOptions = [
 
 const LabRequisition = () => {
   const [selected, setSelected] = useState<string[]>(["crown"]);
-  const [dentistName, setDentistName] = useState("Dr. Aarav Singh");
+  const [dentistName, setDentistName] = useState("Doctor");
   
   const toggle = (id: string) =>
     setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
