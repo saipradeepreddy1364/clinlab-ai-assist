@@ -26,15 +26,11 @@ const Dashboard = () => {
   const [userName, setUserName] = useState("Doctor");
   const [greeting, setGreeting] = useState("Good morning");
   const [stats, setStats] = useState({
-    active: 12,
-    labPending: 5,
-    urgent: 1,
+    active: 0,
+    labPending: 0,
+    urgent: 0,
   });
-  const [recentCases, setRecentCases] = useState<any[]>([
-    { id: "C-2041", name: "Priya Sharma", tooth: "36", dx: "Irreversible Pulpitis", urgent: false },
-    { id: "C-2039", name: "Aisha Khan", tooth: "46", dx: "Acute Apical Abscess", urgent: true },
-    { id: "C-2040", name: "Rohan Mehta", tooth: "11", dx: "Crown Prep — PFM", urgent: false },
-  ]);
+  const [recentCases, setRecentCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,8 +47,15 @@ const Dashboard = () => {
           .eq('doctor_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (!error && cases && cases.length > 0) {
-          setRecentCases(cases.slice(0, 3));
+        if (!error && cases) {
+          setRecentCases(cases.slice(0, 3).map(c => ({
+            id: c.id,
+            name: c.patient_name,
+            tooth: c.tooth_number,
+            dx: c.diagnosis,
+            urgent: c.is_urgent
+          })));
+          
           setStats({
             active: cases.filter(c => c.status === 'in-progress').length,
             labPending: cases.filter(c => c.status === 'lab-sent').length,
@@ -83,7 +86,7 @@ const Dashboard = () => {
             <Activity className="w-2.5 h-2.5 mr-1" /> Today
           </Badge>
           <h2 className="font-display text-xl font-bold leading-snug">
-            {greeting}, Dr. {userName.split(" ").pop()}
+            {greeting}, Dr. {userName}
           </h2>
           <p className="text-primary-foreground/85 text-sm mt-1">
             {stats.active} active cases · {stats.labPending} lab requests pending
@@ -150,34 +153,43 @@ const Dashboard = () => {
         </div>
         <Card className="rounded-2xl shadow-card border-border/60 overflow-hidden">
           <div className="divide-y divide-border">
-            {recentCases.map((c) => (
-              <Link
-                key={c.id}
-                to={`/patients/${c.id}`}
-                className="flex items-center gap-3 p-3.5 active:bg-muted transition-smooth"
-              >
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
-                    c.urgent ? "bg-urgent/10 text-urgent" : "bg-primary/10 text-primary"
-                  }`}
+            {recentCases.length > 0 ? (
+              recentCases.map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/patients/${c.id}`}
+                  className="flex items-center gap-3 p-3.5 active:bg-muted transition-smooth"
                 >
-                  {c.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{c.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    Tooth {c.tooth} · {c.dx}
-                  </p>
-                </div>
-                {c.urgent ? (
-                  <Badge className="bg-urgent text-urgent-foreground border-0 rounded-full text-[10px] px-2">
-                    Urgent
-                  </Badge>
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                )}
-              </Link>
-            ))}
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
+                      c.urgent ? "bg-urgent/10 text-urgent" : "bg-primary/10 text-primary"
+                    }`}
+                  >
+                    {c.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      Tooth {c.tooth} · {c.dx}
+                    </p>
+                  </div>
+                  {c.urgent ? (
+                    <Badge className="bg-urgent text-urgent-foreground border-0 rounded-full text-[10px] px-2">
+                      Urgent
+                    </Badge>
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </Link>
+              ))
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-sm text-muted-foreground">No recent cases found.</p>
+                <Link to="/new-case">
+                  <Button variant="link" className="text-xs h-auto p-0 mt-1">Create your first case</Button>
+                </Link>
+              </div>
+            )}
           </div>
         </Card>
       </div>
