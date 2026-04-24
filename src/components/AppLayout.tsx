@@ -87,7 +87,7 @@ const AppLayout = () => {
         className={cn(
           "relative w-full bg-background flex flex-col overflow-hidden",
           // Phone-shape on md+, fullscreen on mobile
-          "h-screen md:h-[860px] md:max-h-[92vh] md:w-[420px]",
+          "h-[100dvh] md:h-[860px] md:max-h-[92vh] md:w-[420px]",
           "md:rounded-[2.75rem] md:border md:border-border md:shadow-elevated"
         )}
       >

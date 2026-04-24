@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2 } from "lucide-react";
+import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2, Calendar, User, ClipboardList } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -16,6 +19,9 @@ type FileItem = {
   progress: number; 
   type: "img" | "pdf" | "doc" | "zip";
   path: string;
+  patientName?: string;
+  caseType?: string;
+  appointmentDate?: string;
 };
 
 const tags = ["X-ray", "Prescription", "Lab Report", "Other"];
@@ -32,6 +38,13 @@ const Uploads = () => {
   const [loading, setLoading] = useState(true);
   const [drag, setDrag] = useState(false);
   const [uploading, setUploading] = useState(false);
+  
+  // Metadata form state
+  const [metadata, setMetadata] = useState({
+    patientName: "",
+    caseType: "General",
+    appointmentDate: new Date().toISOString().split('T')[0]
+  });
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -49,15 +62,33 @@ const Uploads = () => {
           .list(user.id);
 
         if (!error && data) {
-          setFiles(data.map(f => ({
-            id: f.id,
-            name: f.name,
-            size: `${(f.metadata.size / 1024 / 1024).toFixed(1)} MB`,
-            tag: "Other",
-            progress: 100,
-            type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : f.name.match(/\.pdf$/i) ? "pdf" : "doc",
-            path: `${user.id}/${f.name}`
-          })));
+          setFiles(data.map(f => {
+            // Attempt to parse metadata from filename if possible
+            // Format: patient_case_date-filename
+            const parts = f.name.split('--');
+            let pName = "", cType = "", aDate = "", actualName = f.name;
+            
+            if (parts.length > 1) {
+              const metaParts = parts[0].split('_');
+              pName = metaParts[0]?.replace(/-/g, ' ');
+              cType = metaParts[1]?.replace(/-/g, ' ');
+              aDate = metaParts[2]?.replace(/-/g, ' ');
+              actualName = parts.slice(1).join('--');
+            }
+
+            return {
+              id: f.id,
+              name: actualName,
+              size: `${(f.metadata.size / 1024 / 1024).toFixed(1)} MB`,
+              tag: "Other",
+              progress: 100,
+              type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : f.name.match(/\.pdf$/i) ? "pdf" : "doc",
+              path: `${user.id}/${f.name}`,
+              patientName: pName,
+              caseType: cType,
+              appointmentDate: aDate
+            };
+          }));
         }
       }
       setLoading(false);
@@ -69,6 +100,11 @@ const Uploads = () => {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
+    
+    if (!metadata.patientName.trim()) {
+      toast.error("Please enter patient name first");
+      return;
+    }
 
     setUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -81,7 +117,9 @@ const Uploads = () => {
 
     for (const file of Array.from(selectedFiles)) {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${file.name}`;
+      // Store metadata in the filename: patient_case_date--original
+      const metaString = `${metadata.patientName.replace(/\s+/g, '-')}_${metadata.caseType.replace(/\s+/g, '-')}_${metadata.appointmentDate.replace(/\s+/g, '-')}`;
+      const fileName = `${metaString}--${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
       const newFileItem: FileItem = {
@@ -91,7 +129,10 @@ const Uploads = () => {
         tag: "Other",
         progress: 10,
         type: file.type.includes("image") ? "img" : file.type.includes("pdf") ? "pdf" : "doc",
-        path: filePath
+        path: filePath,
+        patientName: metadata.patientName,
+        caseType: metadata.caseType,
+        appointmentDate: metadata.appointmentDate
       };
 
       setFiles(prev => [newFileItem, ...prev]);
@@ -115,6 +156,23 @@ const Uploads = () => {
     setUploading(false);
   };
 
+  const handleFileClick = async (file: FileItem) => {
+    if (file.progress < 100) return;
+    
+    try {
+      const { data, error } = await supabase.storage
+        .from('clinical-files')
+        .createSignedUrl(file.path, 3600); // 1 hour access
+
+      if (error) throw error;
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error: any) {
+      toast.error(`Error opening file: ${error.message}`);
+    }
+  };
+
   const handleDelete = async (file: FileItem) => {
     try {
       const { error } = await supabase.storage
@@ -132,7 +190,61 @@ const Uploads = () => {
 
   return (
     <div className="space-y-5 animate-fade-up">
-      <p className="text-sm text-muted-foreground">PDF · Images · DOCX · ZIP — bulk supported, auto-linked to patient.</p>
+      <div className="space-y-4">
+        <h2 className="font-display text-lg font-bold">File Upload Metadata</h2>
+        <Card className="p-4 rounded-2xl shadow-card border-border/60 space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="patientName" className="flex items-center gap-2">
+                <User className="w-4 h-4 text-primary" /> Patient Name
+              </Label>
+              <Input
+                id="patientName"
+                placeholder="Enter patient name"
+                className="rounded-xl"
+                value={metadata.patientName}
+                onChange={(e) => setMetadata({ ...metadata, patientName: e.target.value })}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-secondary" /> Case Type
+                </Label>
+                <Select
+                  value={metadata.caseType}
+                  onValueChange={(v) => setMetadata({ ...metadata, caseType: v })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General">General</SelectItem>
+                    <SelectItem value="RCT">RCT</SelectItem>
+                    <SelectItem value="Crown">Crown</SelectItem>
+                    <SelectItem value="Extraction">Extraction</SelectItem>
+                    <SelectItem value="Implant">Implant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="date" className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-accent" /> Date
+                </Label>
+                <Input
+                  id="date"
+                  type="date"
+                  className="rounded-xl"
+                  value={metadata.appointmentDate}
+                  onChange={(e) => setMetadata({ ...metadata, appointmentDate: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       <div
         onDragOver={(e) => {
@@ -146,22 +258,25 @@ const Uploads = () => {
         }}
         className={cn(
           "relative rounded-2xl border-2 border-dashed p-6 text-center transition-smooth",
-          drag ? "border-primary bg-primary/5" : "border-border bg-card"
+          drag ? "border-primary bg-primary/5" : "border-border bg-card",
+          !metadata.patientName && "opacity-50 grayscale cursor-not-allowed"
         )}
       >
         <input
           type="file"
           multiple
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
           onChange={handleFileUpload}
-          disabled={uploading}
+          disabled={uploading || !metadata.patientName}
         />
         <div className="w-12 h-12 rounded-2xl gradient-soft flex items-center justify-center mx-auto mb-3">
           {uploading ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : <Upload className="w-5 h-5 text-primary" />}
         </div>
-        <h3 className="font-display font-semibold text-base">Drop files or browse</h3>
-        <p className="text-xs text-muted-foreground mt-1">Up to 25 files at once</p>
-        <Button variant="hero" size="lg" className="w-full mt-4 pointer-events-none">
+        <h3 className="font-display font-semibold text-base">
+          {!metadata.patientName ? "Enter patient name first" : "Drop files or browse"}
+        </h3>
+        <p className="text-xs text-muted-foreground mt-1">Files will be tagged for {metadata.patientName || "..."}</p>
+        <Button variant="hero" size="lg" className="w-full mt-4 pointer-events-none" disabled={!metadata.patientName}>
           {uploading ? "Uploading..." : "Select files"}
         </Button>
       </div>
@@ -181,27 +296,31 @@ const Uploads = () => {
             files.map((f, i) => {
               const Icon = iconMap[f.type] || FileText;
               return (
-                <div key={i} className="p-4 flex items-center gap-3 group">
+                <div key={i} className="p-4 flex items-center gap-3 group hover:bg-muted/30 transition-smooth cursor-pointer" onClick={() => handleFileClick(f)}>
                   <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
                     <Icon className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium truncate">{f.name}</p>
-                      <Badge variant="outline" className="rounded-full text-xs">{f.tag}</Badge>
+                      {f.patientName && <Badge variant="secondary" className="rounded-full text-[10px]">{f.patientName}</Badge>}
+                      {f.caseType && <Badge variant="outline" className="rounded-full text-[10px]">{f.caseType}</Badge>}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <Progress value={f.progress} className="h-1.5 flex-1" />
-                      <span className="text-xs text-muted-foreground w-16 text-right">
-                        {f.progress < 100 ? `${f.progress}%` : f.size}
+                      <span className="text-xs text-muted-foreground w-20 text-right">
+                        {f.appointmentDate || f.size}
                       </span>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(f)}
+                    className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(f);
+                    }}
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -233,14 +352,6 @@ const Uploads = () => {
           </li>
         </ul>
       </Card>
-
-      <div className="text-xs text-muted-foreground pb-4">
-        Tag uploads as: {tags.map((t) => (
-          <Badge key={t} variant="outline" className="rounded-full mr-1.5 text-xs">
-            {t}
-          </Badge>
-        ))}
-      </div>
     </div>
   );
 };
