@@ -23,30 +23,21 @@ const LabRequisition = () => {
     setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-4xl">
-      <div>
-        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-          <ClipboardList className="w-7 h-7 text-secondary" /> Lab requisition
-        </h1>
-        <p className="text-muted-foreground mt-1">Auto-filled from clinical entry — review and send.</p>
-      </div>
+    <div className="space-y-5 animate-fade-up">
+      <p className="text-sm text-muted-foreground">Auto-filled from clinical entry — review and send.</p>
 
       <Card className="rounded-2xl overflow-hidden shadow-card border-border/60">
-        <div className="gradient-primary p-6 text-primary-foreground">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-wider opacity-80">Lab requisition #LR-2041</p>
-              <h2 className="font-display text-2xl font-bold mt-1">Crown — Tooth 36</h2>
-            </div>
-            <div className="text-right text-sm opacity-90">
-              <p>24 Apr 2026</p>
-              <p>Return: 5–7 working days</p>
-            </div>
+        <div className="gradient-primary p-4 text-primary-foreground">
+          <p className="text-[10px] uppercase tracking-wider opacity-80">Lab requisition #LR-2041</p>
+          <h2 className="font-display text-lg font-bold mt-1">Crown — Tooth 36</h2>
+          <div className="flex items-center justify-between text-xs opacity-90 mt-2">
+            <span>24 Apr 2026</span>
+            <span>Return: 5–7 days</span>
           </div>
         </div>
 
-        <div className="p-6 space-y-5">
-          <div className="grid sm:grid-cols-2 gap-4">
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-2">
               <Label>Patient name</Label>
               <Input defaultValue="Priya Sharma" className="rounded-xl h-11" />
@@ -99,18 +90,20 @@ const LabRequisition = () => {
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-2">
               <Label>Material</Label>
               <Input defaultValue="PFM (Porcelain-fused-to-metal)" className="rounded-xl h-11" />
             </div>
-            <div className="space-y-2">
-              <Label>Shade</Label>
-              <Input defaultValue="A2 (Vita)" className="rounded-xl h-11" />
-            </div>
-            <div className="space-y-2">
-              <Label>Margin type</Label>
-              <Input defaultValue="Chamfer" className="rounded-xl h-11" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Shade</Label>
+                <Input defaultValue="A2 (Vita)" className="rounded-xl h-11" />
+              </div>
+              <div className="space-y-2">
+                <Label>Margin</Label>
+                <Input defaultValue="Chamfer" className="rounded-xl h-11" />
+              </div>
             </div>
           </div>
 
@@ -124,14 +117,14 @@ const LabRequisition = () => {
         </div>
       </Card>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" size="lg" className="rounded-xl gap-2" onClick={() => toast.success("PDF downloaded")}>
-          <Download className="w-4 h-4" /> Download PDF
+          <Download className="w-4 h-4" /> PDF
         </Button>
         <Button variant="outline" size="lg" className="rounded-xl gap-2" onClick={() => window.print()}>
           <Printer className="w-4 h-4" /> Print
         </Button>
-        <Button variant="hero" size="lg" className="flex-1 sm:flex-initial" onClick={() => toast.success("Sent to lab")}>
+        <Button variant="hero" size="lg" className="col-span-2" onClick={() => toast.success("Sent to lab")}>
           <Send className="w-4 h-4" /> Send to lab
         </Button>
       </div>

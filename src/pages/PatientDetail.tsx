@@ -26,38 +26,34 @@ const timeline = [
 const PatientDetail = () => {
   const { id } = useParams();
   return (
-    <div className="space-y-6 animate-fade-up max-w-5xl">
-      <Link to="/patients" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-smooth">
-        <ArrowLeft className="w-4 h-4" /> Back to patients
-      </Link>
-
+    <div className="space-y-4 animate-fade-up">
       <Card className="rounded-2xl overflow-hidden shadow-card border-border/60">
-        <div className="gradient-primary p-6 text-primary-foreground">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center font-display font-bold text-2xl">
+        <div className="gradient-primary p-4 text-primary-foreground">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center font-display font-bold text-lg flex-shrink-0">
               P
             </div>
-            <div className="flex-1">
-              <h1 className="font-display text-2xl font-bold">Priya Sharma</h1>
-              <p className="text-primary-foreground/85 text-sm mt-0.5">
-                Case #{id || "C-2041"} · Female · 32 yrs · Tooth 36
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-lg font-bold truncate">Priya Sharma</h1>
+              <p className="text-primary-foreground/85 text-xs mt-0.5 truncate">
+                #{id || "C-2041"} · F · 32 · Tooth 36
               </p>
             </div>
-            <Badge className="bg-white/20 text-primary-foreground border-0 rounded-full backdrop-blur">In progress</Badge>
           </div>
+          <Badge className="bg-white/20 text-primary-foreground border-0 rounded-full backdrop-blur text-[10px] mt-3">In progress</Badge>
         </div>
       </Card>
 
-      <Tabs defaultValue="timeline" className="space-y-4">
-        <TabsList className="rounded-xl bg-muted p-1">
-          <TabsTrigger value="timeline" className="rounded-lg">Timeline</TabsTrigger>
-          <TabsTrigger value="notes" className="rounded-lg">Notes</TabsTrigger>
-          <TabsTrigger value="ai" className="rounded-lg">AI suggestions</TabsTrigger>
-          <TabsTrigger value="files" className="rounded-lg">Files</TabsTrigger>
+      <Tabs defaultValue="timeline" className="space-y-3">
+        <TabsList className="rounded-xl bg-muted p-1 w-full grid grid-cols-4 h-auto">
+          <TabsTrigger value="timeline" className="rounded-lg text-xs">Timeline</TabsTrigger>
+          <TabsTrigger value="notes" className="rounded-lg text-xs">Notes</TabsTrigger>
+          <TabsTrigger value="ai" className="rounded-lg text-xs">AI</TabsTrigger>
+          <TabsTrigger value="files" className="rounded-lg text-xs">Files</TabsTrigger>
         </TabsList>
 
         <TabsContent value="timeline">
-          <Card className="rounded-2xl p-6 shadow-card border-border/60">
+          <Card className="rounded-2xl p-4 shadow-card border-border/60">
             <div className="relative">
               <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border" />
               <div className="space-y-6">
@@ -92,7 +88,7 @@ const PatientDetail = () => {
         </TabsContent>
 
         <TabsContent value="notes">
-          <Card className="rounded-2xl p-6 shadow-card border-border/60 space-y-3">
+          <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
             <h3 className="font-display font-semibold flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary" /> Clinical notes
             </h3>
@@ -105,7 +101,7 @@ const PatientDetail = () => {
         </TabsContent>
 
         <TabsContent value="ai">
-          <Card className="rounded-2xl p-6 shadow-card border-border/60 space-y-3">
+          <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
             <h3 className="font-display font-semibold flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-accent" /> AI suggestions log
             </h3>
@@ -118,11 +114,11 @@ const PatientDetail = () => {
         </TabsContent>
 
         <TabsContent value="files">
-          <Card className="rounded-2xl p-6 shadow-card border-border/60 space-y-3">
-            <h3 className="font-display font-semibold flex items-center gap-2">
+          <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
+            <h3 className="font-display font-semibold text-sm flex items-center gap-2">
               <ClipboardList className="w-4 h-4 text-secondary" /> Lab forms & uploads
             </h3>
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-2">
               {[
                 { name: "Pre-op IOPA.jpg", tag: "X-ray", icon: ImageIcon },
                 { name: "Crown Lab Req.pdf", tag: "Lab Report", icon: FileText },

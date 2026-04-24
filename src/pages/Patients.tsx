@@ -16,46 +16,42 @@ const patients = [
 
 const Patients = () => {
   return (
-    <div className="space-y-6 animate-fade-up">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Patient records</h1>
-          <p className="text-muted-foreground mt-1">{patients.length} cases</p>
-        </div>
+    <div className="space-y-4 animate-fade-up">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{patients.length} cases</p>
         <Link to="/new-case">
-          <Button variant="hero" size="lg">
-            <Plus className="w-4 h-4" /> New case
+          <Button variant="hero" size="sm" className="rounded-full h-9">
+            <Plus className="w-3.5 h-3.5" /> New
           </Button>
         </Link>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="relative">
         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search patients, case ID, diagnosis..." className="pl-10 rounded-xl h-11" />
+        <Input placeholder="Search patients, case ID..." className="pl-10 rounded-xl h-11" />
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-3">
         {patients.map((p) => (
           <Link key={p.id} to={`/patients/${p.id}`}>
-            <Card className="p-5 rounded-2xl shadow-card border-border/60 hover:shadow-elevated hover:-translate-y-0.5 transition-smooth h-full">
-              <div className="flex items-start gap-3 mb-3">
-                <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center font-semibold ${
-                    p.urgent ? "bg-urgent/10 text-urgent" : "gradient-soft text-primary"
-                  }`}
-                >
-                  {p.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{p.name}</p>
-                  <p className="text-xs text-muted-foreground">#{p.id} · {p.date}</p>
-                </div>
-                {p.urgent && <AlertCircle className="w-4 h-4 text-urgent flex-shrink-0" />}
+            <Card className="p-4 rounded-2xl shadow-card border-border/60 active:scale-[0.99] transition-smooth flex items-center gap-3">
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold flex-shrink-0 ${
+                  p.urgent ? "bg-urgent/10 text-urgent" : "gradient-soft text-primary"
+                }`}
+              >
+                {p.name.charAt(0)}
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{p.dx}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-sm truncate">{p.name}</p>
+                  {p.urgent && <AlertCircle className="w-3.5 h-3.5 text-urgent flex-shrink-0" />}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">#{p.id} · {p.dx}</p>
+              </div>
               <Badge
                 variant="outline"
-                className={`rounded-full text-xs ${
+                className={`rounded-full text-[10px] flex-shrink-0 ${
                   p.urgent ? "border-urgent/30 text-urgent bg-urgent/5" : ""
                 }`}
               >

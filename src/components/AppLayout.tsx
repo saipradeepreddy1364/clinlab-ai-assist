@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FilePlus2,
@@ -9,106 +9,137 @@ import {
   Moon,
   Sun,
   Stethoscope,
-  LogOut,
+  Bell,
+  ChevronLeft,
+  Signal,
+  Wifi,
+  BatteryFull,
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
-const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/new-case", label: "New Case", icon: FilePlus2 },
-  { to: "/ai-engine", label: "AI Clinical Guide", icon: Sparkles },
-  { to: "/lab-requisition", label: "Lab Requisition", icon: ClipboardList },
-  { to: "/patients", label: "Patient Records", icon: Users },
-  { to: "/uploads", label: "File Uploads", icon: Upload },
+const tabs = [
+  { to: "/", label: "Home", icon: LayoutDashboard, end: true },
+  { to: "/new-case", label: "New", icon: FilePlus2 },
+  { to: "/ai-engine", label: "AI", icon: Sparkles, primary: true },
+  { to: "/patients", label: "Records", icon: Users },
+  { to: "/uploads", label: "Files", icon: Upload },
 ];
+
+const titleMap: Record<string, string> = {
+  "/": "Clinical Assistant",
+  "/new-case": "New Case",
+  "/ai-engine": "AI Clinical Guide",
+  "/lab-requisition": "Lab Requisition",
+  "/patients": "Patient Records",
+  "/uploads": "File Uploads",
+};
 
 const AppLayout = () => {
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isHome = location.pathname === "/";
+  const isDetail = location.pathname.startsWith("/patients/") && location.pathname !== "/patients";
+  const title =
+    titleMap[location.pathname] ?? (isDetail ? "Patient" : "ClinLab");
+
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar — desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card sticky top-0 h-screen">
-        <div className="p-6 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
-            <Stethoscope className="w-5 h-5 text-primary-foreground" />
+    // Outer "device stage" — gives a phone-frame feel on tablet/desktop
+    <div className="min-h-screen w-full bg-muted/40 dark:bg-background flex items-center justify-center md:p-6">
+      <div
+        className={cn(
+          "relative w-full bg-background flex flex-col overflow-hidden",
+          // Phone-shape on md+, fullscreen on mobile
+          "min-h-screen md:min-h-0 md:h-[860px] md:max-h-[92vh] md:w-[420px]",
+          "md:rounded-[2.75rem] md:border md:border-border md:shadow-elevated"
+        )}
+      >
+        {/* Faux status bar — visible on md+ to sell the phone frame */}
+        <div className="hidden md:flex items-center justify-between px-7 pt-3 pb-1 text-[11px] font-semibold text-foreground/80">
+          <span>{time}</span>
+          <div className="flex items-center gap-1.5">
+            <Signal className="w-3 h-3" />
+            <Wifi className="w-3 h-3" />
+            <BatteryFull className="w-4 h-4" />
           </div>
-          <span className="font-display text-xl font-bold tracking-tight">ClinLab</span>
         </div>
-        <nav className="flex-1 px-3 space-y-1">
-          {nav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-smooth",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )
-              }
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="p-3 border-t border-border space-y-1">
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-3 rounded-xl" onClick={toggle}>
-            {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            {theme === "light" ? "Dark mode" : "Light mode"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-3 rounded-xl text-muted-foreground"
-            onClick={() => navigate("/login")}
-          >
-            <LogOut className="w-4 h-4" />
-            Sign out
-          </Button>
-        </div>
-      </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile top bar */}
-        <header className="lg:hidden sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <Stethoscope className="w-4 h-4 text-primary-foreground" />
+        {/* App header */}
+        <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-xl border-b border-border/60 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {isDetail ? (
+              <button
+                onClick={() => navigate(-1)}
+                className="w-9 h-9 -ml-1 rounded-full hover:bg-muted flex items-center justify-center transition-smooth"
+                aria-label="Back"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            ) : (
+              <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-glow flex-shrink-0">
+                <Stethoscope className="w-4.5 h-4.5 text-primary-foreground" />
+              </div>
+            )}
+            <div className="min-w-0">
+              {isHome && (
+                <p className="text-[11px] text-muted-foreground leading-tight">ClinLab</p>
+              )}
+              <h1 className="font-display font-bold text-base leading-tight truncate">{title}</h1>
             </div>
-            <span className="font-display font-bold">ClinLab</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={toggle} className="rounded-full">
-            {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={toggle} className="rounded-full h-9 w-9">
+              {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </Button>
+            <button className="relative w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-smooth">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-urgent" />
+            </button>
+          </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-10 pb-24 lg:pb-10 max-w-7xl w-full mx-auto">
+        {/* Scrollable content */}
+        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-28">
           <Outlet />
         </main>
 
-        {/* Mobile bottom nav */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-card/95 backdrop-blur-xl border-t border-border px-2 py-2 grid grid-cols-5 gap-1">
-          {nav.slice(0, 5).map((item) => (
+        {/* Bottom tab bar */}
+        <nav className="absolute bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/60 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] grid grid-cols-5 gap-1">
+          {tabs.map((t) => (
             <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
+              key={t.to}
+              to={t.to}
+              end={t.end}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-1 py-2 rounded-lg text-[10px] font-medium transition-smooth",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  "flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-smooth",
+                  isActive ? "text-primary" : "text-muted-foreground active:bg-muted"
                 )
               }
             >
-              <item.icon className="w-5 h-5" />
-              <span className="truncate max-w-full px-1">{item.label.split(" ")[0]}</span>
+              {({ isActive }) =>
+                t.primary ? (
+                  <div
+                    className={cn(
+                      "w-12 h-12 -mt-5 rounded-2xl flex items-center justify-center shadow-elevated transition-smooth",
+                      "gradient-primary text-primary-foreground",
+                      isActive && "scale-105"
+                    )}
+                  >
+                    <t.icon className="w-5 h-5" />
+                  </div>
+                ) : (
+                  <>
+                    <t.icon className={cn("w-5 h-5", isActive && "scale-110 transition-smooth")} />
+                    <span className="text-[10px] font-medium">{t.label}</span>
+                  </>
+                )
+              }
             </NavLink>
           ))}
         </nav>
