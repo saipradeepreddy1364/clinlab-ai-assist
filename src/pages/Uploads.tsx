@@ -38,7 +38,7 @@ const Uploads = () => {
   const [loading, setLoading] = useState(true);
   const [drag, setDrag] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   // Metadata form state
   const [metadata, setMetadata] = useState({
     patientName: "",
@@ -191,52 +191,68 @@ const Uploads = () => {
   return (
     <div className="space-y-5 animate-fade-up">
       <div className="space-y-4">
-        <h2 className="font-display text-lg font-bold">File Upload Metadata</h2>
-        <Card className="p-4 rounded-2xl shadow-card border-border/60 space-y-4">
-          <div className="grid grid-cols-1 gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold">Case Information</h2>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs text-muted-foreground h-8 px-2"
+            onClick={() => setMetadata({
+              patientName: "",
+              caseType: "General",
+              appointmentDate: new Date().toISOString().split('T')[0]
+            })}
+          >
+            Clear Form
+          </Button>
+        </div>
+        
+        <Card className="p-5 rounded-3xl shadow-card border-border/60 bg-card/50 backdrop-blur-sm space-y-5">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="patientName" className="flex items-center gap-2">
-                <User className="w-4 h-4 text-primary" /> Patient Name
+              <Label htmlFor="patientName" className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                <User className="w-3.5 h-3.5" /> Full Name
               </Label>
               <Input
                 id="patientName"
-                placeholder="Enter patient name"
-                className="rounded-xl"
+                placeholder="Dr. Jayasimha Mummadi..."
+                className="rounded-2xl bg-background border-border/40 h-12 text-base focus:ring-primary/20"
                 value={metadata.patientName}
                 onChange={(e) => setMetadata({ ...metadata, patientName: e.target.value })}
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4 text-secondary" /> Case Type
+                <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                  <ClipboardList className="w-3.5 h-3.5" /> Case
                 </Label>
                 <Select
                   value={metadata.caseType}
                   onValueChange={(v) => setMetadata({ ...metadata, caseType: v })}
                 >
-                  <SelectTrigger className="rounded-xl">
+                  <SelectTrigger className="rounded-2xl bg-background border-border/40 h-12">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="General">General</SelectItem>
-                    <SelectItem value="RCT">RCT</SelectItem>
-                    <SelectItem value="Crown">Crown</SelectItem>
-                    <SelectItem value="Extraction">Extraction</SelectItem>
-                    <SelectItem value="Implant">Implant</SelectItem>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="General">General Exam</SelectItem>
+                    <SelectItem value="RCT">Endodontics (RCT)</SelectItem>
+                    <SelectItem value="Crown">Prosthetics (Crown)</SelectItem>
+                    <SelectItem value="Extraction">Surgery (Extraction)</SelectItem>
+                    <SelectItem value="Implant">Implantology</SelectItem>
+                    <SelectItem value="Ortho">Orthodontics</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="date" className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-accent" /> Date
+                <Label htmlFor="date" className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                  <Calendar className="w-3.5 h-3.5" /> Date
                 </Label>
                 <Input
                   id="date"
                   type="date"
-                  className="rounded-xl"
+                  className="rounded-2xl bg-background border-border/40 h-12"
                   value={metadata.appointmentDate}
                   onChange={(e) => setMetadata({ ...metadata, appointmentDate: e.target.value })}
                 />
