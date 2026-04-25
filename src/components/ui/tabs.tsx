@@ -1,53 +1,96 @@
 import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+interface TabsProps {
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  children: React.ReactNode;
+  style?: ViewStyle;
+}
 
-const Tabs = TabsPrimitive.Root;
+const TabsContext = React.createContext<{
+  value?: string;
+  onValueChange?: (value: string) => void;
+}>({});
 
-const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsList.displayName = TabsPrimitive.List.displayName;
+const Tabs = ({ defaultValue, value: controlledValue, onValueChange, children, style }: TabsProps) => {
+  const [uncontrolledValue, setUncontrolledValue] = React.useState(defaultValue);
+  const value = controlledValue !== undefined ? controlledValue : uncontrolledValue;
+  
+  const handleValueChange = React.useCallback((newValue: string) => {
+    if (controlledValue === undefined) {
+      setUncontrolledValue(newValue);
+    }
+    onValueChange?.(newValue);
+  }, [controlledValue, onValueChange]);
 
-const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+  return (
+    <TabsContext.Provider value={{ value, onValueChange: handleValueChange }}>
+      <View style={style}>{children}</View>
+    </TabsContext.Provider>
+  );
+};
 
-const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+const TabsList = ({ children, style }: { children: React.ReactNode, style?: ViewStyle }) => (
+  <View style={[styles.list, style]}>{children}</View>
+);
+
+const TabsTrigger = ({ value, children, style }: { value: string, children: React.ReactNode, style?: ViewStyle }) => {
+  const { value: activeValue, onValueChange } = React.useContext(TabsContext);
+  const isActive = activeValue === value;
+
+  return (
+    <TouchableOpacity 
+      onPress={() => onValueChange?.(value)}
+      style={[styles.trigger, isActive && styles.triggerActive, style]}
+    >
+      {typeof children === "string" ? (
+        <Text style={[styles.triggerText, isActive && styles.triggerTextActive]}>{children}</Text>
+      ) : (
+        children
+      )}
+    </TouchableOpacity>
+  );
+};
+
+const TabsContent = ({ value, children, style }: { value: string, children: React.ReactNode, style?: ViewStyle }) => {
+  const { value: activeValue } = React.useContext(TabsContext);
+  if (activeValue !== value) return null;
+  return <View style={style}>{children}</View>;
+};
+
+const styles = StyleSheet.create({
+  list: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  trigger: {
+    flex: 1,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  triggerActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  triggerText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#64748B",
+  },
+  triggerTextActive: {
+    color: "#0F172A",
+  },
+});
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };

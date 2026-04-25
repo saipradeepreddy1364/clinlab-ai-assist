@@ -1,38 +1,50 @@
 import * as React from "react";
-import * as AvatarPrimitive from "@radix-ui/react-avatar";
+import { View, Image, Text, StyleSheet, ViewStyle, ImageStyle, TextStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+const Avatar = ({ children, style }: { children?: React.ReactNode, style?: ViewStyle }) => (
+  <View style={[styles.avatar, style]}>{children}</View>
+);
 
-const Avatar = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Root
-    ref={ref}
-    className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
-    {...props}
-  />
-));
-Avatar.displayName = AvatarPrimitive.Root.displayName;
+const AvatarImage = ({ source, style }: { source: any, style?: ImageStyle }) => (
+  <Image source={source} style={[styles.image, style]} />
+);
 
-const AvatarImage = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Image>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image ref={ref} className={cn("aspect-square h-full w-full", className)} {...props} />
-));
-AvatarImage.displayName = AvatarPrimitive.Image.displayName;
+const AvatarFallback = ({ children, style }: { children?: React.ReactNode, style?: ViewStyle }) => (
+  <View style={[styles.fallback, style]}>
+    {typeof children === "string" ? (
+      <Text style={styles.fallbackText}>{children}</Text>
+    ) : (
+      children
+    )}
+  </View>
+);
 
-const AvatarFallback = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Fallback>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Fallback
-    ref={ref}
-    className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)}
-    {...props}
-  />
-));
-AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
+const styles = StyleSheet.create({
+  avatar: {
+    position: "relative",
+    height: 40,
+    width: 40,
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "#F1F5F9",
+  },
+  image: {
+    height: "100%",
+    width: "100%",
+    aspectRatio: 1,
+  },
+  fallback: {
+    height: "100%",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1F5F9",
+  },
+  fallbackText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#475569",
+  },
+});
 
 export { Avatar, AvatarImage, AvatarFallback };

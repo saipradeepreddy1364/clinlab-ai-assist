@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from "react-native";
 import {
   Sparkles,
   CheckCircle2,
@@ -9,15 +10,11 @@ import {
   Mic,
   ArrowRight,
   Loader2,
-} from "lucide-react";
+} from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useVoiceInput } from "@/hooks/useVoice";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import AppLayout from "@/components/AppLayout";
 
 type Output = {
   diagnosis: string;
@@ -74,9 +71,9 @@ const procedures: Record<string, Output> = {
 };
 
 const confidenceColors: Record<Output["confidence"], string> = {
-  High: "bg-success text-success-foreground",
-  Medium: "bg-warning text-warning-foreground",
-  Low: "bg-destructive text-destructive-foreground",
+  High: "#22C55E",
+  Medium: "#F59E0B",
+  Low: "#EF4444",
 };
 
 const AIEngine = () => {
@@ -92,13 +89,15 @@ const AIEngine = () => {
   });
 
   useEffect(() => {
-    const guest = localStorage.getItem("guestMode") === "true";
-    setIsGuest(guest);
+    const checkGuest = async () => {
+      const guestValue = await AsyncStorage.getItem("guestMode");
+      setIsGuest(guestValue === "true");
+    };
+    checkGuest();
   }, []);
 
   const handleSuggest = () => {
     if (!input.trim()) {
-      toast.error("Please enter a clinical condition or your thoughts");
       return;
     }
 
@@ -115,187 +114,426 @@ const AIEngine = () => {
 
       setOutput(match);
       setLoading(false);
-      toast.success("AI suggestion generated!");
     }, 1500);
   };
 
   return (
-    <div className="space-y-5 animate-fade-up">
-      <p className="text-sm text-muted-foreground">
-        Share your clinical findings or the current procedure step to get AI-validated guidance.
-      </p>
+    <AppLayout>
+      <View style={styles.container}>
+        <Text style={styles.description}>
+          Share your clinical findings or the current procedure step to get AI-validated guidance.
+        </Text>
 
-      {/* Entry area */}
-      {!isGuest ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="p-3 rounded-2xl shadow-card border-border/60 bg-card/50">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Symptoms</Label>
-              <div className="flex items-center gap-2">
-                <Input 
-                  placeholder="Pain, swelling..." 
-                  className="rounded-xl h-9 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
-                  value={symptoms}
-                  onChange={(e) => setSymptoms(e.target.value)}
-                />
-              </div>
-            </Card>
-            <Card className="p-3 rounded-2xl shadow-card border-border/60 bg-card/50">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Procedure Stage</Label>
-              <div className="flex items-center gap-2">
-                <Input 
-                  placeholder="Access, Cleaning..." 
-                  className="rounded-xl h-9 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
-                  value={stage}
-                  onChange={(e) => setStage(e.target.value)}
-                />
-              </div>
-            </Card>
-          </div>
+        {/* Entry area */}
+        {!isGuest ? (
+          <View style={styles.entrySection}>
+            <View style={styles.grid}>
+              <View style={styles.gridItem}>
+                <View style={styles.inputCard}>
+                  <Text style={styles.inputLabel}>Symptoms</Text>
+                  <TextInput 
+                    placeholder="Pain, swelling..." 
+                    style={styles.smallInput}
+                    value={symptoms}
+                    onChangeText={setSymptoms}
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+              </View>
+              <View style={styles.gridItem}>
+                <View style={styles.inputCard}>
+                  <Text style={styles.inputLabel}>Procedure Stage</Text>
+                  <TextInput 
+                    placeholder="Access, Cleaning..." 
+                    style={styles.smallInput}
+                    value={stage}
+                    onChangeText={setStage}
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+              </View>
+            </View>
 
-          <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Clinical thoughts / condition</Label>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className={cn("rounded-full h-8 px-3 gap-1.5 text-xs transition-smooth", isListening && "bg-urgent/10 border-urgent text-urgent")}
-                onClick={isListening ? stopListening : startListening}
+            <View style={styles.mainInputCard}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.inputLabel}>Clinical thoughts / condition</Text>
+                <TouchableOpacity 
+                  onPress={isListening ? stopListening : startListening}
+                  style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
+                >
+                  <Mic size={14} color={isListening ? "#EF4444" : "#64748B"} />
+                  <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
+                    {isListening ? "Listening..." : "Voice"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                value={input}
+                onChangeText={setInput}
+                placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
+                multiline
+                style={styles.textarea}
+                placeholderTextColor="#94A3B8"
+              />
+              <TouchableOpacity
+                onPress={handleSuggest}
+                style={styles.suggestButton}
+                disabled={loading}
               >
-                <Mic className={cn("w-3.5 h-3.5", isListening && "animate-pulse")} />
-                {isListening ? "Listening..." : "Voice"}
-              </Button>
-            </div>
-            <textarea
+                {loading ? <Loader2 size={16} color="#FFFFFF" /> : <Sparkles size={16} color="#FFFFFF" />}
+                <Text style={styles.suggestButtonText}>Get AI Guidance</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.mainInputCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.inputLabel}>Current Step / Thought</Text>
+              <TouchableOpacity 
+                onPress={isListening ? stopListening : startListening}
+                style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
+              >
+                <Mic size={14} color={isListening ? "#EF4444" : "#64748B"} />
+                <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
+                  {isListening ? "Listening..." : "Voice"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
-              className="w-full min-h-[120px] rounded-xl border-0 bg-transparent p-0 text-sm focus-visible:outline-none resize-none transition-smooth"
+              onChangeText={setInput}
+              placeholder="What step are you performing right now?"
+              multiline
+              style={styles.textarea}
+              placeholderTextColor="#94A3B8"
             />
-            <Button
-              variant="hero"
-              size="lg"
-              onClick={handleSuggest}
-              className="w-full h-12 rounded-2xl"
+            <TouchableOpacity
+              onPress={handleSuggest}
+              style={styles.suggestButton}
               disabled={loading}
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              Get AI Guidance
-            </Button>
-          </Card>
-        </div>
-      ) : (
-        <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-4">
-          <div className="flex items-center justify-between">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Current Step / Thought</Label>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className={cn("rounded-full h-8 px-3 gap-1.5 text-xs transition-smooth", isListening && "bg-urgent/10 border-urgent text-urgent")}
-              onClick={isListening ? stopListening : startListening}
-            >
-              <Mic className={cn("w-3.5 h-3.5", isListening && "animate-pulse")} />
-              {isListening ? "Listening..." : "Voice"}
-            </Button>
-          </div>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="What step are you performing right now?"
-            className="w-full min-h-[100px] rounded-xl border-0 bg-transparent p-0 text-sm focus-visible:outline-none resize-none transition-smooth"
-          />
-          <Button
-            variant="hero"
-            size="lg"
-            onClick={handleSuggest}
-            className="w-full h-12 rounded-2xl"
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-            Get Guidance
-          </Button>
-        </Card>
-      )}
+              {loading ? <Loader2 size={16} color="#FFFFFF" /> : <Sparkles size={16} color="#FFFFFF" />}
+              <Text style={styles.suggestButtonText}>Get Guidance</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {output && !loading && (
-        <div className="space-y-4 animate-fade-up">
-          {/* Diagnosis card */}
-          <Card className="rounded-2xl p-4 border-2 border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 shadow-glow text-left">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-[10px] uppercase tracking-wider text-accent font-semibold">Suggested diagnosis</p>
-              <Badge className={`${confidenceColors[output.confidence]} border-0 rounded-full px-2 py-0.5 text-[10px]`}>
-                <ShieldCheck className="w-2.5 h-2.5 mr-1" /> {output.confidence}
-              </Badge>
-            </div>
-            <h2 className="font-display text-lg font-bold text-foreground leading-snug">{output.diagnosis}</h2>
-          </Card>
+        {output && !loading && (
+          <View style={styles.outputSection}>
+            {/* Diagnosis card */}
+            <View style={styles.diagnosisCard}>
+              <View style={styles.diagnosisHeader}>
+                <Text style={styles.diagnosisLabel}>Suggested diagnosis</Text>
+                <View style={[styles.confidenceBadge, { backgroundColor: confidenceColors[output.confidence] }]}>
+                  <ShieldCheck size={10} color="#FFFFFF" />
+                  <Text style={styles.confidenceText}>{output.confidence}</Text>
+                </View>
+              </View>
+              <Text style={styles.diagnosisTitle}>{output.diagnosis}</Text>
+            </View>
 
-          {/* Next steps */}
-          <Card className="rounded-2xl p-4 shadow-card border-border/60">
-            <h3 className="font-display font-semibold text-sm flex items-center gap-2 mb-3 uppercase tracking-wider text-muted-foreground">
-              <ArrowRight className="w-4 h-4 text-primary" /> Next steps
-            </h3>
-            <ol className="space-y-3">
-              {output.steps.map((step, i) => (
-                <li key={i} className="flex gap-3 group">
-                  <div className="w-6 h-6 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-xs font-semibold flex-shrink-0 shadow-sm">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 pt-0.5">
-                    <p className="text-foreground text-sm leading-relaxed">{step}</p>
-                  </div>
-                  <CheckCircle2 className="w-4 h-4 text-muted-foreground/30 group-active:text-success transition-smooth flex-shrink-0 mt-1" />
-                </li>
-              ))}
-            </ol>
-          </Card>
+            {/* Next steps */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <ArrowRight size={16} color="#0EA5E9" />
+                <Text style={styles.cardTitle}>Next steps</Text>
+              </View>
+              <View style={styles.stepsList}>
+                {output.steps.map((step, i) => (
+                  <View key={i} style={styles.stepItem}>
+                    <View style={styles.stepNumber}>
+                      <Text style={styles.stepNumberText}>{i + 1}</Text>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={styles.stepText}>{step}</Text>
+                    </View>
+                    <CheckCircle2 size={16} color="#CBD5E1" />
+                  </View>
+                ))}
+              </View>
+            </View>
 
-          <Card className="rounded-2xl p-4 shadow-card border-border/60">
-            <h3 className="font-display font-semibold text-sm flex items-center gap-2 mb-3 uppercase tracking-wider text-muted-foreground">
-              <Wrench className="w-4 h-4 text-secondary" /> Instruments
-            </h3>
-            <ul className="grid grid-cols-1 gap-2">
-              {output.instruments.map((i) => (
-                <li key={i} className="flex items-center gap-2 text-sm">
-                  <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                  {i}
-                </li>
-              ))}
-            </ul>
-          </Card>
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Wrench size={16} color="#8B5CF6" />
+                <Text style={styles.cardTitle}>Instruments</Text>
+              </View>
+              <View style={styles.list}>
+                {output.instruments.map((item) => (
+                  <View key={item} style={styles.listItem}>
+                    <View style={[styles.dot, { backgroundColor: "#8B5CF6" }]} />
+                    <Text style={styles.listText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
 
-          <Card className="rounded-2xl p-4 shadow-card border-border/60">
-            <h3 className="font-display font-semibold text-sm flex items-center gap-2 mb-3 uppercase tracking-wider text-muted-foreground">
-              <FlaskConical className="w-4 h-4 text-accent" /> Materials
-            </h3>
-            <ul className="grid grid-cols-1 gap-2">
-              {output.materials.map((m) => (
-                <li key={m} className="flex items-center gap-2 text-sm">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                  {m}
-                </li>
-              ))}
-            </ul>
-          </Card>
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <FlaskConical size={16} color="#F43F5E" />
+                <Text style={styles.cardTitle}>Materials</Text>
+              </View>
+              <View style={styles.list}>
+                {output.materials.map((item) => (
+                  <View key={item} style={styles.listItem}>
+                    <View style={[styles.dot, { backgroundColor: "#F43F5E" }]} />
+                    <Text style={styles.listText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
 
-          {/* Alerts */}
-          <Card className="rounded-2xl p-4 border-warning/30 bg-warning/5">
-            <div className="flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground text-sm">Verify clinically before proceeding</p>
-                <ul className="space-y-1 text-xs text-muted-foreground">
-                  {output.alerts.map((a) => (
-                    <li key={a}>• {a}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
+            {/* Alerts */}
+            <View style={styles.alertCard}>
+              <AlertTriangle size={20} color="#F59E0B" />
+              <View style={styles.alertContent}>
+                <Text style={styles.alertTitle}>Verify clinically before proceeding</Text>
+                {output.alerts.map((alert) => (
+                  <Text key={alert} style={styles.alertText}>• {alert}</Text>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+    </AppLayout>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    gap: 20,
+  },
+  description: {
+    fontSize: 14,
+    color: "#64748B",
+    lineHeight: 20,
+  },
+  entrySection: {
+    gap: 16,
+  },
+  grid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  gridItem: {
+    flex: 1,
+  },
+  inputCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 20,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  smallInput: {
+    fontSize: 12,
+    color: "#0F172A",
+    height: 36,
+    padding: 0,
+  },
+  mainInputCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+    gap: 16,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  voiceButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    height: 32,
+  },
+  voiceButtonActive: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderColor: "#EF4444",
+  },
+  voiceButtonText: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  voiceButtonTextActive: {
+    color: "#EF4444",
+  },
+  textarea: {
+    fontSize: 14,
+    color: "#0F172A",
+    minHeight: 120,
+    textAlignVertical: "top",
+    padding: 0,
+  },
+  suggestButton: {
+    backgroundColor: "#0EA5E9",
+    height: 48,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  suggestButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  outputSection: {
+    gap: 16,
+  },
+  diagnosisCard: {
+    backgroundColor: "rgba(14, 165, 233, 0.05)",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: "rgba(14, 165, 233, 0.2)",
+  },
+  diagnosisHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  diagnosisLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#0EA5E9",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  confidenceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  confidenceText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  diagnosisTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+  },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  stepsList: {
+    gap: 12,
+  },
+  stepItem: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#0EA5E9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepNumberText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  stepContent: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  stepText: {
+    fontSize: 14,
+    color: "#0F172A",
+    lineHeight: 20,
+  },
+  list: {
+    gap: 8,
+  },
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  listText: {
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  alertCard: {
+    backgroundColor: "rgba(245, 158, 11, 0.05)",
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.2)",
+  },
+  alertContent: {
+    flex: 1,
+    gap: 4,
+  },
+  alertTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  alertText: {
+    fontSize: 12,
+    color: "#64748B",
+    lineHeight: 18,
+  },
+  spin: {
+    // Rotation logic in RN usually requires Animated API
+  },
+  pulse: {
+    // Pulse logic in RN usually requires Animated API
+  }
+});
 
 export default AIEngine;

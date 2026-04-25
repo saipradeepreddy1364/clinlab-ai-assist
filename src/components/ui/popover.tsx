@@ -1,29 +1,40 @@
 import * as React from "react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ViewStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+const PopoverContext = React.createContext<{ open: boolean; setOpen: (v: boolean) => void }>({
+  open: false, setOpen: () => {},
+});
 
-const Popover = PopoverPrimitive.Root;
+export const Popover = ({ children }: { children: React.ReactNode }) => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <PopoverContext.Provider value={{ open, setOpen }}>
+      <View>{children}</View>
+    </PopoverContext.Provider>
+  );
+};
 
-const PopoverTrigger = PopoverPrimitive.Trigger;
+export const PopoverTrigger = ({ children, style }: { children: React.ReactNode; style?: ViewStyle }) => {
+  const { setOpen } = React.useContext(PopoverContext);
+  return <TouchableOpacity onPress={() => setOpen(true)} style={style}>{children}</TouchableOpacity>;
+};
 
-const PopoverContent = React.forwardRef<
-  React.ElementRef<typeof PopoverPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
-  <PopoverPrimitive.Portal>
-    <PopoverPrimitive.Content
-      ref={ref}
-      align={align}
-      sideOffset={sideOffset}
-      className={cn(
-        "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        className,
-      )}
-      {...props}
-    />
-  </PopoverPrimitive.Portal>
-));
-PopoverContent.displayName = PopoverPrimitive.Content.displayName;
+export const PopoverContent = ({ children, style }: { children: React.ReactNode; style?: ViewStyle }) => {
+  const { open, setOpen } = React.useContext(PopoverContext);
+  return (
+    <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setOpen(false)}>
+        <View style={[styles.content, style]}>{children}</View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
 
-export { Popover, PopoverTrigger, PopoverContent };
+const styles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.1)", justifyContent: "center", alignItems: "center" },
+  content: {
+    backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, minWidth: 200,
+    borderWidth: 1, borderColor: "#E2E8F0",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
+  },
+});

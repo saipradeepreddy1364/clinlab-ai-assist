@@ -1,27 +1,41 @@
 import * as React from "react";
-import * as HoverCardPrimitive from "@radix-ui/react-hover-card";
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ViewStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+// hover-card → on mobile, show on press
+const HoverCardContext = React.createContext<{ open: boolean; setOpen: (v: boolean) => void }>({
+  open: false, setOpen: () => {},
+});
 
-const HoverCard = HoverCardPrimitive.Root;
+export const HoverCard = ({ children }: { children: React.ReactNode }) => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <HoverCardContext.Provider value={{ open, setOpen }}>
+      <View>{children}</View>
+    </HoverCardContext.Provider>
+  );
+};
 
-const HoverCardTrigger = HoverCardPrimitive.Trigger;
+export const HoverCardTrigger = ({ children, style }: { children: React.ReactNode; style?: ViewStyle }) => {
+  const { setOpen } = React.useContext(HoverCardContext);
+  return <TouchableOpacity onPress={() => setOpen(true)} style={style}>{children}</TouchableOpacity>;
+};
 
-const HoverCardContent = React.forwardRef<
-  React.ElementRef<typeof HoverCardPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof HoverCardPrimitive.Content>
->(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
-  <HoverCardPrimitive.Content
-    ref={ref}
-    align={align}
-    sideOffset={sideOffset}
-    className={cn(
-      "z-50 w-64 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-      className,
-    )}
-    {...props}
-  />
-));
-HoverCardContent.displayName = HoverCardPrimitive.Content.displayName;
+export const HoverCardContent = ({ children, style }: { children: React.ReactNode; style?: ViewStyle }) => {
+  const { open, setOpen } = React.useContext(HoverCardContext);
+  return (
+    <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setOpen(false)}>
+        <View style={[styles.content, style]}>{children}</View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
 
-export { HoverCard, HoverCardTrigger, HoverCardContent };
+const styles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.1)", justifyContent: "center", alignItems: "center" },
+  content: {
+    backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, minWidth: 200,
+    borderWidth: 1, borderColor: "#E2E8F0",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
+  },
+});

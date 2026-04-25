@@ -1,4 +1,6 @@
+import * as React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Theme = "light" | "dark";
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
@@ -7,14 +9,18 @@ const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
 });
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
-    return (localStorage.getItem("clinlab-theme") as Theme) || "light";
-  });
+  const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("clinlab-theme", theme);
+    const loadTheme = async () => {
+      const savedTheme = await AsyncStorage.getItem("clinlab-theme");
+      if (savedTheme) setTheme(savedTheme as Theme);
+    };
+    loadTheme();
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem("clinlab-theme", theme);
   }, [theme]);
 
   return (

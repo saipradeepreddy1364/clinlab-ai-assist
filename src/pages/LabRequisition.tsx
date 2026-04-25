@@ -1,13 +1,8 @@
-import { useState, useEffect } from "react";
-import { Download, Printer, Send, ClipboardList } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from "react-native";
+import { Download, Printer, Send, ClipboardList } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
+import AppLayout from "@/components/AppLayout";
 
 const labOptions = [
   { id: "crown", label: "Crown" },
@@ -36,117 +31,272 @@ const LabRequisition = () => {
   }, []);
 
   return (
-    <div className="space-y-5 animate-fade-up">
-      <p className="text-sm text-muted-foreground">Auto-filled from clinical entry — review and send.</p>
+    <AppLayout>
+      <View style={styles.container}>
+        <Text style={styles.description}>Auto-filled from clinical entry — review and send.</Text>
 
-      <Card className="rounded-2xl overflow-hidden shadow-card border-border/60">
-        <div className="gradient-primary p-4 text-primary-foreground">
-          <p className="text-[10px] uppercase tracking-wider opacity-80">Lab requisition #LR-2041</p>
-          <h2 className="font-display text-lg font-bold mt-1">Crown — Tooth 36</h2>
-          <div className="flex items-center justify-between text-xs opacity-90 mt-2">
-            <span>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-            <span>Return: 5–7 days</span>
-          </div>
-        </div>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.reqNumber}>Lab requisition #LR-2041</Text>
+            <Text style={styles.cardTitle}>Crown — Tooth 36</Text>
+            <View style={styles.headerMeta}>
+              <Text style={styles.metaText}>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+              <Text style={styles.metaText}>Return: 5–7 days</Text>
+            </View>
+          </View>
 
-        <div className="p-4 space-y-4">
-          <div className="grid grid-cols-1 gap-3">
-            <div className="space-y-2">
-              <Label>Patient name</Label>
-              <Input defaultValue="Priya Sharma" className="rounded-xl h-11" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Age</Label>
-                <Input defaultValue="32" className="rounded-xl h-11" />
-              </div>
-              <div className="space-y-2">
-                <Label>Gender</Label>
-                <Input defaultValue="Female" className="rounded-xl h-11" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Dentist</Label>
-              <Input 
+          <View style={styles.cardBody}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Patient name</Text>
+              <TextInput style={styles.input} defaultValue="Priya Sharma" placeholderTextColor="#94A3B8" />
+            </View>
+
+            <View style={styles.grid}>
+              <View style={styles.gridItem}>
+                <Text style={styles.label}>Age</Text>
+                <TextInput style={styles.input} defaultValue="32" keyboardType="numeric" placeholderTextColor="#94A3B8" />
+              </View>
+              <View style={styles.gridItem}>
+                <Text style={styles.label}>Gender</Text>
+                <TextInput style={styles.input} defaultValue="Female" placeholderTextColor="#94A3B8" />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Dentist</Text>
+              <TextInput 
+                style={styles.input}
                 value={dentistName} 
-                onChange={(e) => setDentistName(e.target.value)}
-                className="rounded-xl h-11" 
+                onChangeText={setDentistName}
+                placeholderTextColor="#94A3B8"
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Tooth number (FDI)</Label>
-              <Input defaultValue="36" className="rounded-xl h-11" />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Diagnosis</Label>
-              <Input defaultValue="Irreversible pulpitis — RCT completed, crown indicated" className="rounded-xl h-11" />
-            </div>
-          </div>
+            </View>
 
-          <div className="space-y-3">
-            <Label>Lab work required</Label>
-            <div className="flex flex-wrap gap-2">
-              {labOptions.map((o) => {
-                const active = selected.includes(o.id);
-                return (
-                  <button
-                    type="button"
-                    key={o.id}
-                    onClick={() => toggle(o.id)}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium border transition-smooth",
-                      active
-                        ? "bg-secondary text-secondary-foreground border-secondary"
-                        : "bg-background border-border hover:border-secondary/50"
-                    )}
-                  >
-                    {o.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Tooth number (FDI)</Text>
+              <TextInput style={styles.input} defaultValue="36" placeholderTextColor="#94A3B8" />
+            </View>
 
-          <div className="grid grid-cols-1 gap-3">
-            <div className="space-y-2">
-              <Label>Material</Label>
-              <Input defaultValue="PFM (Porcelain-fused-to-metal)" className="rounded-xl h-11" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Shade</Label>
-                <Input defaultValue="A2 (Vita)" className="rounded-xl h-11" />
-              </div>
-              <div className="space-y-2">
-                <Label>Margin</Label>
-                <Input defaultValue="Chamfer" className="rounded-xl h-11" />
-              </div>
-            </div>
-          </div>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Diagnosis</Text>
+              <TextInput style={styles.input} defaultValue="Irreversible pulpitis — RCT completed, crown indicated" placeholderTextColor="#94A3B8" />
+            </View>
 
-          <div className="space-y-2">
-            <Label>Special instructions</Label>
-            <Textarea
-              defaultValue="Please match cervical translucency. Contact for shade verification before bake."
-              className="rounded-xl min-h-24 resize-none"
-            />
-          </div>
-        </div>
-      </Card>
+            <View style={styles.selectionGroup}>
+              <Text style={styles.label}>Lab work required</Text>
+              <View style={styles.badgeGrid}>
+                {labOptions.map((o) => {
+                  const active = selected.includes(o.id);
+                  return (
+                    <TouchableOpacity
+                      key={o.id}
+                      onPress={() => toggle(o.id)}
+                      style={[styles.badge, active && styles.badgeActive]}
+                    >
+                      <Text style={[styles.badgeText, active && styles.badgeTextActive]}>{o.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button variant="outline" size="lg" className="rounded-xl gap-2" onClick={() => toast.success("PDF downloaded")}>
-          <Download className="w-4 h-4" /> PDF
-        </Button>
-        <Button variant="outline" size="lg" className="rounded-xl gap-2" onClick={() => window.print()}>
-          <Printer className="w-4 h-4" /> Print
-        </Button>
-        <Button variant="hero" size="lg" className="col-span-2" onClick={() => toast.success("Sent to lab")}>
-          <Send className="w-4 h-4" /> Send to lab
-        </Button>
-      </div>
-    </div>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Material</Text>
+              <TextInput style={styles.input} defaultValue="PFM (Porcelain-fused-to-metal)" placeholderTextColor="#94A3B8" />
+            </View>
+
+            <View style={styles.grid}>
+              <View style={styles.gridItem}>
+                <Text style={styles.label}>Shade</Text>
+                <TextInput style={styles.input} defaultValue="A2 (Vita)" placeholderTextColor="#94A3B8" />
+              </View>
+              <View style={styles.gridItem}>
+                <Text style={styles.label}>Margin</Text>
+                <TextInput style={styles.input} defaultValue="Chamfer" placeholderTextColor="#94A3B8" />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Special instructions</Text>
+              <TextInput
+                style={styles.textarea}
+                defaultValue="Please match cervical translucency. Contact for shade verification before bake."
+                multiline
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.actions}>
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.secondaryButton}>
+              <Download size={16} color="#0F172A" />
+              <Text style={styles.secondaryButtonText}>PDF</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton}>
+              <Printer size={16} color="#0F172A" />
+              <Text style={styles.secondaryButtonText}>Print</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.primaryButton}>
+            <Send size={16} color="#FFFFFF" />
+            <Text style={styles.primaryButtonText}>Send to lab</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </AppLayout>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    gap: 20,
+  },
+  description: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+  },
+  cardHeader: {
+    backgroundColor: "#0EA5E9",
+    padding: 16,
+  },
+  reqNumber: {
+    fontSize: 10,
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    opacity: 0.8,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginTop: 4,
+  },
+  headerMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  metaText: {
+    fontSize: 12,
+    color: "#FFFFFF",
+    opacity: 0.9,
+  },
+  cardBody: {
+    padding: 16,
+    gap: 16,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  input: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  grid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  gridItem: {
+    flex: 1,
+    gap: 8,
+  },
+  selectionGroup: {
+    gap: 8,
+  },
+  badgeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+  },
+  badgeActive: {
+    backgroundColor: "#8B5CF6",
+    borderColor: "#8B5CF6",
+  },
+  badgeText: {
+    fontSize: 13,
+    color: "#0F172A",
+    fontWeight: "500",
+  },
+  badgeTextActive: {
+    color: "#FFFFFF",
+  },
+  textarea: {
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: "#0F172A",
+    textAlignVertical: "top",
+  },
+  actions: {
+    gap: 10,
+    marginTop: 8,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  secondaryButton: {
+    flex: 1,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  primaryButton: {
+    height: 54,
+    backgroundColor: "#0EA5E9",
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});
 
 export default LabRequisition;

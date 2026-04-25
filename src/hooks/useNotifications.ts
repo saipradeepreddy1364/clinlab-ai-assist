@@ -1,19 +1,26 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
+// import * as Notifications from 'expo-notifications'; // Assume expo-notifications or similar
 
 export const useNotifications = () => {
   useEffect(() => {
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    const setupNotifications = async () => {
+      // In a real Expo app, we'd request permissions here
+      // const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      // let finalStatus = existingStatus;
+      // if (existingStatus !== 'granted') {
+      //   const { status } = await Notifications.requestPermissionsAsync();
+      //   finalStatus = status;
+      // }
+    };
+
+    setupNotifications();
 
     const setupRealtime = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Subscribe to changes in the cases table
       const channel = supabase
         .channel('schema-db-changes')
         .on(
@@ -28,16 +35,13 @@ export const useNotifications = () => {
             const newCase = payload.new as any;
             const oldCase = payload.old as any;
 
-            // Notify if a case is urgent or status changes to pending/in-progress
             if (payload.eventType === 'INSERT' && (newCase.is_urgent || newCase.status === 'in-progress' || newCase.status === 'pending')) {
-              showNotification(`New Case Alert: ${newCase.patient_name}`, {
+              showNativeNotification(`New Case Alert: ${newCase.patient_name}`, {
                 body: `Tooth ${newCase.tooth_number}: ${newCase.diagnosis}`,
-                icon: '/favicon.ico'
               });
             } else if (payload.eventType === 'UPDATE' && newCase.status !== oldCase.status) {
-              showNotification(`Case Update: ${newCase.patient_name}`, {
+              showNativeNotification(`Case Update: ${newCase.patient_name}`, {
                 body: `Status changed to ${newCase.status}`,
-                icon: '/favicon.ico'
               });
             }
           }
@@ -52,17 +56,19 @@ export const useNotifications = () => {
     setupRealtime();
   }, []);
 
-  const showNotification = (title: string, options?: NotificationOptions) => {
-    // Browser notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, options);
-    }
+  const showNativeNotification = async (title: string, options?: { body: string }) => {
+    // This is where we'd call the native notification API
+    // await Notifications.scheduleNotificationAsync({
+    //   content: {
+    //     title,
+    //     body: options?.body,
+    //     sound: true,
+    //   },
+    //   trigger: null,
+    // });
     
-    // In-app toast
-    toast(title, {
-      description: options?.body,
-    });
+    console.log("Push Notification:", title, options?.body);
   };
 
-  return { showNotification };
+  return { showNativeNotification };
 };

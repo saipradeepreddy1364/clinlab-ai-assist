@@ -1,95 +1,96 @@
 import * as React from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ViewStyle, TextStyle } from "react-native";
+import { X } from "lucide-react-native";
 
-import { cn } from "@/lib/utils";
-
-const Dialog = DialogPrimitive.Root;
-
-const DialogTrigger = DialogPrimitive.Trigger;
-
-const DialogPortal = DialogPrimitive.Portal;
-
-const DialogClose = DialogPrimitive.Close;
-
-const DialogOverlay = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay
-    ref={ref}
-    className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className,
-    )}
-    {...props}
-  />
-));
-DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
-
-const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
-DialogContent.displayName = DialogPrimitive.Content.displayName;
-
-const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
-);
-DialogHeader.displayName = "DialogHeader";
-
-const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
-);
-DialogFooter.displayName = "DialogFooter";
-
-const DialogTitle = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title
-    ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
-    {...props}
-  />
-));
-DialogTitle.displayName = DialogPrimitive.Title.displayName;
-
-const DialogDescription = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
-));
-DialogDescription.displayName = DialogPrimitive.Description.displayName;
-
-export {
-  Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogClose,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
+const Dialog = ({ children, open, onOpenChange }: { children: React.ReactNode, open?: boolean, onOpenChange?: (open: boolean) => void }) => {
+  return <>{children}</>;
 };
+
+const DialogTrigger = ({ children, onPress }: { children: React.ReactNode, onPress?: () => void }) => {
+  return <TouchableOpacity onPress={onPress}>{children}</TouchableOpacity>;
+};
+
+const DialogContent = ({ children, open, onOpenChange, style }: { children: React.ReactNode, open?: boolean, onOpenChange?: (open: boolean) => void, style?: ViewStyle }) => {
+  return (
+    <Modal
+      transparent
+      visible={open}
+      animationType="fade"
+      onRequestClose={() => onOpenChange?.(false)}
+    >
+      <View style={styles.overlay}>
+        <TouchableOpacity style={styles.backdrop} onPress={() => onOpenChange?.(false)} />
+        <View style={[styles.content, style]}>
+          <TouchableOpacity style={styles.close} onPress={() => onOpenChange?.(false)}>
+            <X size={20} color="#64748B" />
+          </TouchableOpacity>
+          {children}
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const DialogHeader = ({ children, style }: { children: React.ReactNode, style?: ViewStyle }) => (
+  <View style={[styles.header, style]}>{children}</View>
+);
+
+const DialogFooter = ({ children, style }: { children: React.ReactNode, style?: ViewStyle }) => (
+  <View style={[styles.footer, style]}>{children}</View>
+);
+
+const DialogTitle = ({ children, style }: { children: React.ReactNode, style?: TextStyle }) => (
+  <Text style={[styles.title, style]}>{children}</Text>
+);
+
+const DialogDescription = ({ children, style }: { children: React.ReactNode, style?: TextStyle }) => (
+  <Text style={[styles.description, style]}>{children}</Text>
+);
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  content: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    position: "relative",
+  },
+  close: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    zIndex: 1,
+  },
+  header: {
+    marginBottom: 16,
+    gap: 4,
+  },
+  footer: {
+    marginTop: 24,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  description: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+});
+
+export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription };

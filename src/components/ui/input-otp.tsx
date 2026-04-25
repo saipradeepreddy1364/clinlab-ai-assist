@@ -1,61 +1,71 @@
 import * as React from "react";
-import { OTPInput, OTPInputContext } from "input-otp";
-import { Dot } from "lucide-react";
+import { View, Text, StyleSheet, TextInput, ViewStyle, TextStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+// Simple OTP input — renders N separate single-character TextInputs
+export interface InputOTPProps {
+  maxLength: number;
+  value?: string;
+  onChange?: (value: string) => void;
+  style?: ViewStyle;
+}
 
-const InputOTP = React.forwardRef<React.ElementRef<typeof OTPInput>, React.ComponentPropsWithoutRef<typeof OTPInput>>(
-  ({ className, containerClassName, ...props }, ref) => (
-    <OTPInput
-      ref={ref}
-      containerClassName={cn("flex items-center gap-2 has-[:disabled]:opacity-50", containerClassName)}
-      className={cn("disabled:cursor-not-allowed", className)}
-      {...props}
-    />
-  ),
-);
-InputOTP.displayName = "InputOTP";
+export const InputOTP = ({ maxLength, value = "", onChange, style }: InputOTPProps) => {
+  const refs = React.useRef<TextInput[]>([]);
 
-const InputOTPGroup = React.forwardRef<React.ElementRef<"div">, React.ComponentPropsWithoutRef<"div">>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn("flex items-center", className)} {...props} />,
-);
-InputOTPGroup.displayName = "InputOTPGroup";
+  const handleChange = (text: string, index: number) => {
+    const chars = value.split("");
+    chars[index] = text.slice(-1); // only last char
+    const newVal = chars.join("").slice(0, maxLength);
+    onChange?.(newVal);
+    if (text && index < maxLength - 1) refs.current[index + 1]?.focus();
+  };
 
-const InputOTPSlot = React.forwardRef<
-  React.ElementRef<"div">,
-  React.ComponentPropsWithoutRef<"div"> & { index: number }
->(({ index, className, ...props }, ref) => {
-  const inputOTPContext = React.useContext(OTPInputContext);
-  const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index];
+  const handleKeyPress = (key: string, index: number) => {
+    if (key === "Backspace" && !value[index] && index > 0) {
+      refs.current[index - 1]?.focus();
+    }
+  };
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        "relative flex h-10 w-10 items-center justify-center border-y border-r border-input text-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md",
-        isActive && "z-10 ring-2 ring-ring ring-offset-background",
-        className,
-      )}
-      {...props}
-    >
-      {char}
-      {hasFakeCaret && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="animate-caret-blink h-4 w-px bg-foreground duration-1000" />
-        </div>
-      )}
-    </div>
+    <View style={[styles.container, style]}>
+      {Array.from({ length: maxLength }).map((_, i) => (
+        <TextInput
+          key={i}
+          ref={(r) => { if (r) refs.current[i] = r; }}
+          style={styles.cell}
+          maxLength={1}
+          keyboardType="number-pad"
+          value={value[i] || ""}
+          onChangeText={(t) => handleChange(t, i)}
+          onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
+          selectTextOnFocus
+        />
+      ))}
+    </View>
   );
-});
-InputOTPSlot.displayName = "InputOTPSlot";
+};
 
-const InputOTPSeparator = React.forwardRef<React.ElementRef<"div">, React.ComponentPropsWithoutRef<"div">>(
-  ({ ...props }, ref) => (
-    <div ref={ref} role="separator" {...props}>
-      <Dot />
-    </div>
-  ),
+export const InputOTPGroup = ({ children, style }: { children: React.ReactNode; style?: ViewStyle }) => (
+  <View style={[styles.group, style]}>{children}</View>
 );
-InputOTPSeparator.displayName = "InputOTPSeparator";
 
-export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator };
+export const InputOTPSlot = ({ index, style }: { index: number; style?: ViewStyle }) => (
+  <View style={[styles.slot, style]}>
+    <Text style={styles.slotText}>–</Text>
+  </View>
+);
+
+export const InputOTPSeparator = () => <Text style={styles.sep}>·</Text>;
+
+const styles = StyleSheet.create({
+  container: { flexDirection: "row", gap: 8, alignItems: "center" },
+  group: { flexDirection: "row", gap: 8 },
+  cell: {
+    width: 44, height: 52, borderWidth: 1.5, borderColor: "#E2E8F0",
+    borderRadius: 10, textAlign: "center", fontSize: 20, fontWeight: "600", color: "#0F172A",
+    backgroundColor: "#FFFFFF",
+  },
+  slot: { width: 44, height: 52, borderWidth: 1.5, borderColor: "#E2E8F0", borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  slotText: { fontSize: 20, color: "#CBD5E1" },
+  sep: { fontSize: 18, color: "#94A3B8" },
+});

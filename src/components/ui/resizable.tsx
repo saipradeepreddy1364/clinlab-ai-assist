@@ -1,37 +1,21 @@
-import { GripVertical } from "lucide-react";
-import * as ResizablePrimitive from "react-resizable-panels";
+import * as React from "react";
+import { View, StyleSheet, ViewStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
-
-const ResizablePanelGroup = ({ className, ...props }: React.ComponentProps<typeof ResizablePrimitive.PanelGroup>) => (
-  <ResizablePrimitive.PanelGroup
-    className={cn("flex h-full w-full data-[panel-group-direction=vertical]:flex-col", className)}
-    {...props}
-  />
+// Resizable panels are not natively supported — render simple split View
+export const ResizablePanelGroup = ({ children, direction = "horizontal", style }: { children: React.ReactNode; direction?: "horizontal" | "vertical"; style?: ViewStyle }) => (
+  <View style={[direction === "horizontal" ? styles.row : styles.col, style]}>{children}</View>
 );
 
-const ResizablePanel = ResizablePrimitive.Panel;
-
-const ResizableHandle = ({
-  withHandle,
-  className,
-  ...props
-}: React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle> & {
-  withHandle?: boolean;
-}) => (
-  <ResizablePrimitive.PanelResizeHandle
-    className={cn(
-      "relative flex w-px items-center justify-center bg-border after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:after:left-0 data-[panel-group-direction=vertical]:after:h-1 data-[panel-group-direction=vertical]:after:w-full data-[panel-group-direction=vertical]:after:-translate-y-1/2 data-[panel-group-direction=vertical]:after:translate-x-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 [&[data-panel-group-direction=vertical]>div]:rotate-90",
-      className,
-    )}
-    {...props}
-  >
-    {withHandle && (
-      <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
-        <GripVertical className="h-2.5 w-2.5" />
-      </div>
-    )}
-  </ResizablePrimitive.PanelResizeHandle>
+export const ResizablePanel = ({ children, defaultSize, style }: { children: React.ReactNode; defaultSize?: number; style?: ViewStyle }) => (
+  <View style={[{ flex: defaultSize ?? 1 }, style]}>{children}</View>
 );
 
-export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
+export const ResizableHandle = ({ style }: { style?: ViewStyle }) => (
+  <View style={[styles.handle, style]} />
+);
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", flex: 1 },
+  col: { flexDirection: "column", flex: 1 },
+  handle: { width: 4, backgroundColor: "#E2E8F0" },
+});

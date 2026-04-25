@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import {
   FilePlus2,
   ClipboardList,
@@ -9,20 +10,20 @@ import {
   AlertCircle,
   ChevronRight,
   Upload,
-} from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+import AppLayout from "@/components/AppLayout";
 
 const actions = [
-  { to: "/new-case", title: "New Case", desc: "Start clinical entry", icon: FilePlus2, tint: "bg-primary/10 text-primary" },
-  { to: "/lab-requisition", title: "Lab Request", desc: "Auto-fill from notes", icon: ClipboardList, tint: "bg-secondary/10 text-secondary" },
-  { to: "/ai-engine", title: "AI Guide", desc: "Suggest next step", icon: Sparkles, tint: "bg-accent/10 text-accent" },
-  { to: "/patients", title: "Records", desc: "Browse case history", icon: Users, tint: "bg-warning/10 text-warning" },
+  { to: "NewCase", title: "New Case", desc: "Start clinical entry", icon: FilePlus2, color: "#0EA5E9" },
+  { to: "LabRequisition", title: "Lab Request", desc: "Auto-fill from notes", icon: ClipboardList, color: "#8B5CF6" },
+  { to: "AIEngine", title: "AI Guide", desc: "Suggest next step", icon: Sparkles, color: "#F43F5E" },
+  { to: "Patients", title: "Records", desc: "Browse case history", icon: Users, color: "#F59E0B" },
 ];
 
 const Dashboard = () => {
+  const navigation = useNavigation<any>();
   const [userName, setUserName] = useState("Doctor");
   const [greeting, setGreeting] = useState("Good morning");
   const [stats, setStats] = useState({
@@ -36,7 +37,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const guest = localStorage.getItem("guestMode") === "true";
+      const guestValue = await AsyncStorage.getItem("guestMode");
+      const guest = guestValue === "true";
       setIsGuest(guest);
 
       if (guest) {
@@ -47,12 +49,10 @@ const Dashboard = () => {
         return;
       }
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserName(user.user_metadata.full_name || "Doctor");
         
-        // Fetch cases for this user
         const { data: cases, error } = await supabase
           .from('cases')
           .select('*')
@@ -78,7 +78,6 @@ const Dashboard = () => {
       setLoading(false);
     };
 
-    // Greeting logic
     const hour = new Date().getHours();
     if (hour < 12) setGreeting("Good morning");
     else if (hour < 17) setGreeting("Good afternoon");
@@ -88,134 +87,348 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-6 animate-fade-up">
-      {/* Hero greeting */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-5 text-primary-foreground shadow-elevated">
-        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute right-10 bottom-0 w-32 h-32 rounded-full bg-accent/40 blur-2xl" />
-        <div className="relative z-10">
-          <Badge className="bg-white/20 text-primary-foreground hover:bg-white/30 border-0 backdrop-blur text-[10px] mb-2">
-            <Activity className="w-2.5 h-2.5 mr-1" /> Today
-          </Badge>
-          <h2 className="font-display text-xl font-bold leading-snug">
-            {greeting}, {isGuest ? "Guest" : `Dr. ${userName}`}
-          </h2>
-          {!isGuest && (
-            <p className="text-primary-foreground/85 text-sm mt-1">
-              {stats.active} active cases · {stats.labPending} lab requests pending
-            </p>
-          )}
-          <div className="flex gap-2 mt-4">
+    <AppLayout>
+      <View style={styles.container}>
+        {/* Hero greeting */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <View style={styles.todayBadge}>
+              <Activity size={10} color="#FFFFFF" />
+              <Text style={styles.todayText}>Today</Text>
+            </View>
+            <Text style={styles.greetingText}>
+              {greeting}, {isGuest ? "Guest" : `Dr. ${userName}`}
+            </Text>
             {!isGuest && (
-              <Link to="/new-case" className="flex-1">
-                <Button variant="glass" size="sm" className="w-full rounded-xl">
-                  <FilePlus2 className="w-3.5 h-3.5" /> New case
-                </Button>
-              </Link>
+              <Text style={styles.statsSummary}>
+                {stats.active} active cases · {stats.labPending} lab requests pending
+              </Text>
             )}
-            <Link to="/ai-engine" className="flex-1">
-              <Button variant="glass" size="sm" className="w-full rounded-xl">
-                <Sparkles className="w-3.5 h-3.5" /> {isGuest ? "AI Clinical Guide" : "Ask AI"}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+            <View style={styles.heroActions}>
+              {!isGuest && (
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate("NewCase")}
+                  style={styles.heroButton}
+                >
+                  <FilePlus2 size={14} color="#FFFFFF" />
+                  <Text style={styles.heroButtonText}>New case</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                onPress={() => navigation.navigate("AIEngine")}
+                style={styles.heroButton}
+              >
+                <Sparkles size={14} color="#FFFFFF" />
+                <Text style={styles.heroButtonText}>
+                  {isGuest ? "AI Clinical Guide" : "Ask AI"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
 
-      {!isGuest && (
-        <>
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-2.5">
-            {[
-              { label: "Active", value: stats.active, tint: "text-primary", icon: Activity },
-              { label: "Lab", value: stats.labPending, tint: "text-secondary", icon: ClipboardList },
-              { label: "Urgent", value: stats.urgent, tint: "text-urgent", icon: AlertCircle },
-            ].map((s) => (
-              <Card key={s.label} className="p-3 rounded-2xl shadow-card border-border/60">
-                <s.icon className={`w-4 h-4 ${s.tint} mb-2`} />
-                <p className="font-display text-xl font-bold leading-none">{s.value}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">{s.label}</p>
-              </Card>
-            ))}
-          </div>
-
-          {/* Quick actions */}
-          <div>
-            <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Quick actions
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {actions.map((a) => (
-                <Link key={a.to} to={a.to}>
-                  <Card className="group p-4 rounded-2xl shadow-card border-border/60 active:scale-[0.98] hover:shadow-elevated transition-smooth h-full">
-                    <div className={`w-10 h-10 rounded-xl ${a.tint} flex items-center justify-center mb-3`}>
-                      <a.icon className="w-5 h-5" />
-                    </div>
-                    <h4 className="font-display font-semibold text-sm">{a.title}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{a.desc}</p>
-                  </Card>
-                </Link>
+        {!isGuest && (
+          <View style={styles.mainContent}>
+            {/* Stats */}
+            <View style={styles.statsGrid}>
+              {[
+                { label: "Active", value: stats.active, color: "#0EA5E9", icon: Activity },
+                { label: "Lab", value: stats.labPending, color: "#8B5CF6", icon: ClipboardList },
+                { label: "Urgent", value: stats.urgent, color: "#EF4444", icon: AlertCircle },
+              ].map((s) => (
+                <View key={s.label} style={styles.statCard}>
+                  <s.icon size={16} color={s.color} />
+                  <Text style={styles.statValue}>{s.value}</Text>
+                  <Text style={styles.statLabel}>{s.label}</Text>
+                </View>
               ))}
-            </div>
-          </div>
+            </View>
 
-          {/* Recent cases */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Recent cases
-              </h3>
-              <Link to="/patients" className="text-xs text-primary font-medium">
-                See all
-              </Link>
-            </div>
-            <Card className="rounded-2xl shadow-card border-border/60 overflow-hidden">
-              <div className="divide-y divide-border">
+            {/* Quick actions */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Quick actions</Text>
+              <View style={styles.actionsGrid}>
+                {actions.map((a) => (
+                  <TouchableOpacity 
+                    key={a.title} 
+                    onPress={() => navigation.navigate(a.to)}
+                    style={styles.actionCard}
+                  >
+                    <View style={[styles.actionIcon, { backgroundColor: `${a.color}15` }]}>
+                      <a.icon size={20} color={a.color} />
+                    </View>
+                    <Text style={styles.actionTitle}>{a.title}</Text>
+                    <Text style={styles.actionDesc}>{a.desc}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Recent cases */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent cases</Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Patients")}>
+                  <Text style={styles.seeAllText}>See all</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.casesCard}>
                 {recentCases.length > 0 ? (
-                  recentCases.map((c) => (
-                    <Link
+                  recentCases.map((c, i) => (
+                    <TouchableOpacity
                       key={c.id}
-                      to={`/patients/${c.id}`}
-                      className="flex items-center gap-3 p-3.5 active:bg-muted transition-smooth"
+                      onPress={() => navigation.navigate("Patients", { screen: "PatientDetail", params: { id: c.id } })}
+                      style={[styles.caseItem, i === recentCases.length - 1 && styles.noBorder]}
                     >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
-                          c.urgent ? "bg-urgent/10 text-urgent" : "bg-primary/10 text-primary"
-                        }`}
-                      >
-                        {c.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{c.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+                      <View style={[styles.patientAvatar, { backgroundColor: c.urgent ? "#EF444415" : "#0EA5E915" }]}>
+                        <Text style={[styles.avatarText, { color: c.urgent ? "#EF4444" : "#0EA5E9" }]}>
+                          {c.name.charAt(0)}
+                        </Text>
+                      </View>
+                      <View style={styles.caseInfo}>
+                        <Text style={styles.patientName}>{c.name}</Text>
+                        <Text style={styles.caseSubtext}>
                           Tooth {c.tooth} · {c.dx}
-                        </p>
-                      </div>
+                        </Text>
+                      </View>
                       {c.urgent ? (
-                        <Badge className="bg-urgent text-urgent-foreground border-0 rounded-full text-[10px] px-2">
-                          Urgent
-                        </Badge>
+                        <View style={styles.urgentBadge}>
+                          <Text style={styles.urgentBadgeText}>Urgent</Text>
+                        </View>
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        <ChevronRight size={16} color="#94A3B8" />
                       )}
-                    </Link>
+                    </TouchableOpacity>
                   ))
                 ) : (
-                  <div className="p-8 text-center">
-                    <p className="text-sm text-muted-foreground">No recent cases found.</p>
-                    <Link to="/new-case">
-                      <Button variant="link" className="text-xs h-auto p-0 mt-1">Create your first case</Button>
-                    </Link>
-                  </div>
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>No recent cases found.</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate("NewCase")}>
+                      <Text style={styles.emptyLink}>Create your first case</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
-              </div>
-            </Card>
-          </div>
-
-        </>
-      )}
-    </div>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+    </AppLayout>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    gap: 24,
+  },
+  heroCard: {
+    borderRadius: 24,
+    backgroundColor: "#0EA5E9",
+    padding: 20,
+    overflow: "hidden",
+  },
+  heroContent: {
+    zIndex: 10,
+  },
+  todayBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+    gap: 4,
+  },
+  todayText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  greetingText: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  statsSummary: {
+    color: "rgba(255, 255, 255, 0.85)",
+    fontSize: 13,
+    marginTop: 4,
+  },
+  heroActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 16,
+  },
+  heroButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    height: 36,
+    borderRadius: 12,
+    gap: 6,
+  },
+  heroButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  mainContent: {
+    gap: 24,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  section: {
+    gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  seeAllText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#0EA5E9",
+  },
+  actionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  actionCard: {
+    width: (Dimensions.get("window").width - 44) / 2,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  actionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  actionDesc: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  casesCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+    overflow: "hidden",
+  },
+  caseItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(226, 232, 240, 0.6)",
+    gap: 12,
+  },
+  noBorder: {
+    borderBottomWidth: 0,
+  },
+  patientAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  caseInfo: {
+    flex: 1,
+  },
+  patientName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  caseSubtext: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  urgentBadge: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  urgentBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  emptyState: {
+    padding: 32,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  emptyLink: {
+    fontSize: 13,
+    color: "#0EA5E9",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+});
 
 export default Dashboard;

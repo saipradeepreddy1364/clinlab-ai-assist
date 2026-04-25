@@ -1,36 +1,26 @@
 import * as React from "react";
-import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
-import { Circle } from "lucide-react";
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from "react-native";
+import { Circle } from "lucide-react-native";
 
-import { cn } from "@/lib/utils";
+export const RadioGroup = ({ children, value, onValueChange, style }: { children: React.ReactNode; value?: string; onValueChange?: (v: string) => void; style?: ViewStyle }) => (
+  <View style={[styles.group, style]}>{children}</View>
+);
 
-const RadioGroup = React.forwardRef<
-  React.ElementRef<typeof RadioGroupPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>
->(({ className, ...props }, ref) => {
-  return <RadioGroupPrimitive.Root className={cn("grid gap-2", className)} {...props} ref={ref} />;
-});
-RadioGroup.displayName = RadioGroupPrimitive.Root.displayName;
-
-const RadioGroupItem = React.forwardRef<
-  React.ElementRef<typeof RadioGroupPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
->(({ className, ...props }, ref) => {
+export const RadioGroupItem = ({ value, currentValue, onSelect, style }: { value: string; currentValue?: string; onSelect?: (v: string) => void; style?: ViewStyle }) => {
+  const isSelected = value === currentValue;
   return (
-    <RadioGroupPrimitive.Item
-      ref={ref}
-      className={cn(
-        "aspect-square h-4 w-4 rounded-full border border-primary text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    >
-      <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <Circle className="h-2.5 w-2.5 fill-current text-current" />
-      </RadioGroupPrimitive.Indicator>
-    </RadioGroupPrimitive.Item>
+    <TouchableOpacity onPress={() => onSelect?.(value)} style={[styles.item, style]}>
+      <View style={[styles.outer, isSelected && styles.outerSelected]}>
+        {isSelected && <View style={styles.inner} />}
+      </View>
+    </TouchableOpacity>
   );
-});
-RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName;
+};
 
-export { RadioGroup, RadioGroupItem };
+const styles = StyleSheet.create({
+  group: { gap: 8 },
+  item: { flexDirection: "row", alignItems: "center" },
+  outer: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#CBD5E1", justifyContent: "center", alignItems: "center" },
+  outerSelected: { borderColor: "#0EA5E9" },
+  inner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0EA5E9" },
+});

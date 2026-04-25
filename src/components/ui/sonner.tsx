@@ -1,27 +1,12 @@
-import { useTheme } from "next-themes";
-import { Toaster as Sonner, toast } from "sonner";
+// sonner.tsx — Toast notifications for React Native
+// Sonner is a web library; we provide a native no-op shim.
+// Use the useToast hook + Toaster component in toaster.tsx for actual toasts.
 
-type ToasterProps = React.ComponentProps<typeof Sonner>;
-
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-
-  return (
-    <Sonner
-      theme={theme as ToasterProps["theme"]}
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-        },
-      }}
-      {...props}
-    />
-  );
+export const Toaster = () => null;
+export const toast = {
+  success: (msg: string) => console.log("[toast/success]", msg),
+  error: (msg: string) => console.log("[toast/error]", msg),
+  info: (msg: string) => console.log("[toast/info]", msg),
+  warning: (msg: string) => console.log("[toast/warning]", msg),
+  message: (msg: string) => console.log("[toast]", msg),
 };
-
-export { Toaster, toast };

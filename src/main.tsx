@@ -1,5 +1,7 @@
-import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
-import "./index.css";
+// React Native / Expo entry point
+// The root App.tsx at the project root is the actual entry for Expo.
+// This file is kept for project structure compatibility.
+import { registerRootComponent } from "expo";
+import App from "./App";
 
-createRoot(document.getElementById("root")!).render(<App />);
+registerRootComponent(App);

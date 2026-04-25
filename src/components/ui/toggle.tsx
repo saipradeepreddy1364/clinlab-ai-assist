@@ -1,37 +1,41 @@
 import * as React from "react";
-import * as TogglePrimitive from "@radix-ui/react-toggle";
-import { cva, type VariantProps } from "class-variance-authority";
+import { TouchableOpacity, StyleSheet, ViewStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+export interface ToggleProps {
+  pressed?: boolean;
+  onPressedChange?: (pressed: boolean) => void;
+  children: React.ReactNode;
+  variant?: "default" | "outline";
+  size?: "default" | "sm" | "lg";
+  style?: ViewStyle;
+  disabled?: boolean;
+}
 
-const toggleVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-muted hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground",
-  {
-    variants: {
-      variant: {
-        default: "bg-transparent",
-        outline: "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground",
-      },
-      size: {
-        default: "h-10 px-3",
-        sm: "h-9 px-2.5",
-        lg: "h-11 px-5",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
+export const Toggle = ({ pressed, onPressedChange, children, variant = "default", size = "default", style, disabled }: ToggleProps) => {
+  return (
+    <TouchableOpacity
+      onPress={() => onPressedChange?.(!pressed)}
+      disabled={disabled}
+      activeOpacity={0.7}
+      style={[
+        styles.base,
+        styles[size],
+        pressed ? styles.pressed : (variant === "outline" ? styles.outline : styles.default),
+        disabled && styles.disabled,
+        style,
+      ]}
+    >
+      {children}
+    </TouchableOpacity>
+  );
+};
 
-const Toggle = React.forwardRef<
-  React.ElementRef<typeof TogglePrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root> & VariantProps<typeof toggleVariants>
->(({ className, variant, size, ...props }, ref) => (
-  <TogglePrimitive.Root ref={ref} className={cn(toggleVariants({ variant, size, className }))} {...props} />
-));
-
-Toggle.displayName = TogglePrimitive.Root.displayName;
-
-export { Toggle, toggleVariants };
+const styles = StyleSheet.create({
+  base: { flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 8 },
+  default: { backgroundColor: "transparent" },
+  outline: { borderWidth: 1, borderColor: "#E2E8F0", backgroundColor: "transparent" },
+  pressed: { backgroundColor: "#F1F5F9" },
+  disabled: { opacity: 0.5 },
+  sm: { height: 32, paddingHorizontal: 10 },
+  lg: { height: 44, paddingHorizontal: 16 },
+});

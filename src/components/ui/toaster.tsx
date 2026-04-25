@@ -1,24 +1,32 @@
-import { useToast } from "@/hooks/use-toast";
-import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast";
+import * as React from "react";
+import { View, StyleSheet } from "react-native";
+import { useToast } from "./use-toast";
+import { Toast } from "./toast";
 
-export function Toaster() {
-  const { toasts } = useToast();
-
+export const Toaster = () => {
+  const { toasts, dismiss } = useToast();
+  if (!toasts.length) return null;
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && <ToastDescription>{description}</ToastDescription>}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        );
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <View style={styles.container}>
+      {toasts.map((t) => (
+        <Toast
+          key={t.id}
+          title={t.title}
+          description={t.description}
+          variant={t.variant}
+          onDismiss={() => dismiss(t.id)}
+        />
+      ))}
+    </View>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
+    zIndex: 9999,
+  },
+});

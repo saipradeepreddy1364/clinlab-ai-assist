@@ -1,14 +1,13 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { Search, Plus, AlertCircle, Loader2, FileText } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Search, Plus, AlertCircle, Loader2, FileText } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+import AppLayout from "@/components/AppLayout";
 
 const Patients = () => {
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
   const [cases, setCases] = useState<any[]>([]);
   const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -16,7 +15,8 @@ const Patients = () => {
 
   useEffect(() => {
     const fetchCases = async () => {
-      const isGuest = localStorage.getItem("guestMode") === "true";
+      const guestValue = await AsyncStorage.getItem("guestMode");
+      const isGuest = guestValue === "true";
       if (isGuest) {
         setCases([]);
         setLoading(false);
@@ -35,7 +35,6 @@ const Patients = () => {
           setCases(data);
         }
 
-        // Fetch file counts from storage
         const { data: files } = await supabase.storage
           .from('clinical-files')
           .list(user.id);
@@ -66,88 +65,255 @@ const Patients = () => {
   );
 
   return (
-    <div className="space-y-4 animate-fade-up">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{filteredCases.length} cases</p>
-        <Link to="/new-case">
-          <Button variant="hero" size="sm" className="rounded-full h-9">
-            <Plus className="w-3.5 h-3.5" /> New
-          </Button>
-        </Link>
-      </div>
+    <AppLayout>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.countText}>{filteredCases.length} cases</Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate("NewCase")}
+            style={styles.addButton}
+          >
+            <Plus size={14} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>New</Text>
+          </TouchableOpacity>
+        </View>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input 
-          placeholder="Search patients, tooth #..." 
-          className="pl-10 rounded-xl h-11" 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+        <View style={styles.searchContainer}>
+          <View style={styles.searchIcon}>
+            <Search size={18} color="#94A3B8" />
+          </View>
+          <TextInput 
+            placeholder="Search patients, tooth #..." 
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholderTextColor="#94A3B8"
+          />
+        </View>
 
-      <div className="space-y-3">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Loader2 className="w-8 h-8 animate-spin mb-2" />
-            <p className="text-sm">Loading records...</p>
-          </div>
-        ) : filteredCases.length > 0 ? (
-          filteredCases.map((p) => (
-            <div key={p.id} className="relative group">
-              <Link to={`/patients/${p.id}`}>
-                <Card className="p-4 rounded-2xl shadow-card border-border/60 active:scale-[0.99] transition-smooth flex items-center gap-3">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold flex-shrink-0 ${
-                      p.is_urgent ? "bg-urgent/10 text-urgent" : "gradient-soft text-primary"
-                    }`}
-                  >
+        <View style={styles.list}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Loader2 size={24} color="#0EA5E9" />
+              <Text style={styles.loadingText}>Loading records...</Text>
+            </View>
+          ) : filteredCases.length > 0 ? (
+            filteredCases.map((p) => (
+              <TouchableOpacity 
+                key={p.id} 
+                onPress={() => navigation.navigate("Patients", { screen: "PatientDetail", params: { id: p.id } })}
+                style={styles.caseCard}
+              >
+                <View
+                  style={[
+                    styles.avatar,
+                    p.is_urgent ? styles.avatarUrgent : styles.avatarNormal
+                  ]}
+                >
+                  <Text style={[styles.avatarText, p.is_urgent ? styles.avatarTextUrgent : styles.avatarTextNormal]}>
                     {p.patient_name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-sm truncate">{p.patient_name}</p>
-                      {p.is_urgent && <AlertCircle className="w-3.5 h-3.5 text-urgent flex-shrink-0" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">Tooth {p.tooth_number} · {p.diagnosis}</p>
-                    
-                    {fileCounts[p.patient_name] && (
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigate(`/uploads?search=${encodeURIComponent(p.patient_name)}`);
-                        }}
-                        className="flex items-center gap-1 mt-1.5 text-[10px] font-medium text-primary hover:underline"
-                      >
-                        <FileText className="w-3 h-3" />
-                        {fileCounts[p.patient_name]} reports available
-                      </button>
-                    )}
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={`rounded-full text-[10px] flex-shrink-0 capitalize ${
-                      p.is_urgent ? "border-urgent/30 text-urgent bg-urgent/5" : ""
-                    }`}
-                  >
+                  </Text>
+                </View>
+                <View style={styles.cardContent}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.patientName}>{p.patient_name}</Text>
+                    {p.is_urgent && <AlertCircle size={14} color="#EF4444" />}
+                  </View>
+                  <Text style={styles.caseSubtext}>Tooth {p.tooth_number} · {p.diagnosis}</Text>
+                  
+                  {fileCounts[p.patient_name] && (
+                    <TouchableOpacity 
+                      onPress={() => navigation.navigate("Uploads", { search: p.patient_name })}
+                      style={styles.reportsLink}
+                    >
+                      <FileText size={12} color="#0EA5E9" />
+                      <Text style={styles.reportsText}>{fileCounts[p.patient_name]} reports available</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={[styles.statusBadge, p.is_urgent && styles.statusBadgeUrgent]}>
+                  <Text style={[styles.statusText, p.is_urgent && styles.statusTextUrgent]}>
                     {p.status.replace('-', ' ')}
-                  </Badge>
-                </Card>
-              </Link>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-12 bg-muted/20 rounded-3xl border-2 border-dashed border-border/60">
-            <p className="text-sm text-muted-foreground">No records found.</p>
-            <Link to="/new-case">
-              <Button variant="link" className="mt-1">Create a new case</Button>
-            </Link>
-          </div>
-        )}
-      </div>
-    </div>
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No records found.</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("NewCase")}>
+                <Text style={styles.emptyLink}>Create a new case</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    </AppLayout>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    gap: 16,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  countText: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0EA5E9",
+    paddingHorizontal: 16,
+    height: 36,
+    borderRadius: 18,
+    gap: 6,
+  },
+  addButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  list: {
+    gap: 12,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  caseCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.6)",
+    gap: 12,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarNormal: {
+    backgroundColor: "rgba(14, 165, 233, 0.05)",
+  },
+  avatarUrgent: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  avatarTextNormal: {
+    color: "#0EA5E9",
+  },
+  avatarTextUrgent: {
+    color: "#EF4444",
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  patientName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  caseSubtext: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  reportsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  reportsText: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#0EA5E9",
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  statusBadgeUrgent: {
+    borderColor: "rgba(239, 68, 68, 0.3)",
+    backgroundColor: "rgba(239, 68, 68, 0.05)",
+  },
+  statusText: {
+    fontSize: 10,
+    color: "#64748B",
+    textTransform: "capitalize",
+  },
+  statusTextUrgent: {
+    color: "#EF4444",
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: "center",
+    backgroundColor: "rgba(248, 250, 252, 0.5)",
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  emptyLink: {
+    fontSize: 14,
+    color: "#0EA5E9",
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  spin: {
+    // spin animation
+  }
+});
 
 export default Patients;

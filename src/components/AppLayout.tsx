@@ -1,5 +1,6 @@
-import { useEffect } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   LayoutDashboard,
   FilePlus2,
@@ -12,217 +13,261 @@ import {
   Stethoscope,
   Bell,
   ChevronLeft,
-  Signal,
-  Wifi,
-  BatteryFull,
   LogOut,
-} from "lucide-react";
+} from "lucide-react-native"; // Using native version
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "./ThemeProvider";
-import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
 import { useNotifications } from "@/hooks/useNotifications";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useState } from "react";
+
+const { width } = Dimensions.get("window");
 
 const tabs = [
-  { to: "/", label: "Home", icon: LayoutDashboard, end: true },
-  { to: "/new-case", label: "New", icon: FilePlus2 },
-  { to: "/ai-engine", label: "AI", icon: Sparkles, primary: true },
-  { to: "/patients", label: "Records", icon: Users },
-  { to: "/uploads", label: "Files", icon: Upload },
+  { name: "Dashboard", label: "Home", icon: LayoutDashboard },
+  { name: "NewCase", label: "New", icon: FilePlus2 },
+  { name: "AIEngine", label: "AI", icon: Sparkles, primary: true },
+  { name: "Patients", label: "Records", icon: Users },
+  { name: "Uploads", label: "Files", icon: Upload },
 ];
 
 const titleMap: Record<string, string> = {
-  "/": "Clinical Assistant",
-  "/new-case": "New Case",
-  "/ai-engine": "AI Clinical Guide",
-  "/lab-requisition": "Lab Requisition",
-  "/patients": "Patient Records",
-  "/uploads": "File Uploads",
+  "Dashboard": "Clinical Assistant",
+  "NewCase": "New Case",
+  "AIEngine": "AI Clinical Guide",
+  "LabRequisition": "Lab Requisition",
+  "Patients": "Patient Records",
+  "Uploads": "File Uploads",
 };
 
-const AppLayout = () => {
+const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { theme, toggle } = useTheme();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
   
   useNotifications();
 
   useEffect(() => {
     const checkUser = async () => {
-      const isGuest = localStorage.getItem("guestMode") === "true";
+      const guestValue = await AsyncStorage.getItem("guestMode");
+      const isGuest = guestValue === "true";
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session && !isGuest) {
-        navigate("/login");
+        navigation.navigate("Login");
       }
     };
     checkUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const isGuest = localStorage.getItem("guestMode") === "true";
-      if (!session && !isGuest) {
-        navigate("/login");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigation]);
 
   const handleLogout = async () => {
-    localStorage.removeItem("guestMode");
+    await AsyncStorage.removeItem("guestMode");
     await supabase.auth.signOut();
-    navigate("/login");
-    toast.success("Signed out successfully");
+    navigation.navigate("Login");
   };
 
-  const isHome = location.pathname === "/";
-  const isDetail = location.pathname.startsWith("/patients/") && location.pathname !== "/patients";
-  const title =
-    titleMap[location.pathname] ?? (isDetail ? "Patient" : "ClinLab");
-
-  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const isHome = route.name === "Dashboard";
+  const title = titleMap[route.name] || "ClinLab";
+  const isDark = theme === "dark";
 
   return (
-    // Outer "device stage" — gives a phone-frame feel on tablet/desktop
-    <div className="min-h-screen w-full bg-muted/40 dark:bg-background flex items-center justify-center md:p-6">
-      <div
-        className={cn(
-          "relative w-full bg-background flex flex-col overflow-hidden",
-          // Phone-shape on md+, fullscreen on mobile
-          "h-[100dvh] md:h-[860px] md:max-h-[92vh] md:w-[420px]",
-          "md:rounded-[2.75rem] md:border md:border-border md:shadow-elevated"
-        )}
-      >
-        {/* Faux status bar — visible on md+ to sell the phone frame */}
-        <div className="hidden md:flex items-center justify-between px-7 pt-3 pb-1 text-[11px] font-semibold text-foreground/80">
-          <span>{time}</span>
-          <div className="flex items-center gap-1.5">
-            <Signal className="w-3 h-3" />
-            <Wifi className="w-3 h-3" />
-            <BatteryFull className="w-4 h-4" />
-          </div>
-        </div>
+    <View style={[styles.container, isDark && styles.containerDark]}>
+      {/* App header */}
+      <View style={[styles.header, isDark && styles.headerDark]}>
+        <View style={styles.headerLeft}>
+          {!isHome ? (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+              <ChevronLeft size={20} color={isDark ? "#FFFFFF" : "#0F172A"} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.logoContainer}>
+              <Stethoscope size={18} color="#FFFFFF" />
+            </View>
+          )}
+          <View>
+            {isHome && <Text style={styles.brandText}>ClinLab</Text>}
+            <Text style={[styles.headerTitle, isDark && styles.textWhite]}>{title}</Text>
+          </View>
+        </View>
 
-        {/* App header */}
-        <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-xl border-b border-border/60 px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {isDetail ? (
-              <button
-                onClick={() => navigate(-1)}
-                className="w-9 h-9 -ml-1 rounded-full hover:bg-muted flex items-center justify-center transition-smooth"
-                aria-label="Back"
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={toggle} style={styles.iconButton}>
+            {isDark ? <Sun size={18} color="#FFFFFF" /> : <Moon size={18} color="#0F172A" />}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
+            <LogOut size={18} color="#64748B" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton}>
+            <Bell size={18} color={isDark ? "#FFFFFF" : "#0F172A"} />
+            {hasNewNotifications && <View style={styles.notificationDot} />}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Main content */}
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+        {children}
+      </ScrollView>
+
+      {/* Bottom tab bar */}
+      <View style={[styles.tabBar, isDark && styles.tabBarDark]}>
+        {tabs.map((tab) => {
+          const isActive = route.name === tab.name;
+          if (tab.primary) {
+            return (
+              <TouchableOpacity
+                key={tab.name}
+                onPress={() => navigation.navigate(tab.name)}
+                style={styles.primaryTab}
               >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            ) : (
-              <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-glow flex-shrink-0">
-                <Stethoscope className="w-4.5 h-4.5 text-primary-foreground" />
-              </div>
-            )}
-            <div className="min-w-0">
-              {isHome && (
-                <p className="text-[11px] text-muted-foreground leading-tight">ClinLab</p>
-              )}
-              <h1 className="font-display font-bold text-base leading-tight truncate">{title}</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={toggle} className="rounded-full h-9 w-9">
-              {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-full h-9 w-9 text-muted-foreground">
-              <LogOut className="w-4 h-4" />
-            </Button>
-            <Sheet onOpenChange={(open) => { if(open) setHasNewNotifications(false); }}>
-              <SheetTrigger asChild>
-                <button className="relative w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-smooth">
-                  <Bell className="w-4 h-4" />
-                  {hasNewNotifications && (
-                    <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-urgent animate-pulse" />
-                  )}
-                </button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px] rounded-l-[2rem]">
-                <SheetHeader className="pb-4 border-b">
-                  <SheetTitle className="font-display font-bold">Notifications</SheetTitle>
-                </SheetHeader>
-                <div className="py-6 space-y-4">
-                  <div className="p-4 rounded-2xl bg-muted/30 border border-border/60">
-                    <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">Welcome to ClinLab AI</p>
-                        <p className="text-xs text-muted-foreground">Your real-time notification center is now active.</p>
-                        <p className="text-[10px] text-primary font-medium mt-1">Just now</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center py-12 text-muted-foreground">
-                    <p className="text-sm">No new alerts.</p>
-                    <p className="text-[10px] mt-1">New cases will appear here in real-time.</p>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </header>
-
-        {/* Scrollable content */}
-        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-28">
-          <Outlet />
-        </main>
-
-        {/* Bottom tab bar */}
-        <nav className="absolute bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/60 px-2 pt-1.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] grid grid-cols-5 gap-1">
-          {tabs.map((t) => (
-            <NavLink
-              key={t.to}
-              to={t.to}
-              end={t.end}
-              className={({ isActive }) =>
-                cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-smooth",
-                  isActive ? "text-primary" : "text-muted-foreground active:bg-muted"
-                )
-              }
+                <View style={styles.primaryTabInner}>
+                  <Sparkles size={24} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            );
+          }
+          return (
+            <TouchableOpacity
+              key={tab.name}
+              onPress={() => navigation.navigate(tab.name)}
+              style={styles.tabItem}
             >
-              {({ isActive }) =>
-                t.primary ? (
-                  <div
-                    className={cn(
-                      "w-12 h-12 -mt-5 rounded-2xl flex items-center justify-center shadow-elevated transition-smooth",
-                      "gradient-primary text-primary-foreground",
-                      isActive && "scale-105"
-                    )}
-                  >
-                    <t.icon className="w-5 h-5" />
-                  </div>
-                ) : (
-                  <>
-                    <t.icon className={cn("w-5 h-5", isActive && "scale-110 transition-smooth")} />
-                    <span className="text-[10px] font-medium">{t.label}</span>
-                  </>
-                )
-              }
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-    </div>
+              <tab.icon size={20} color={isActive ? "#0EA5E9" : "#94A3B8"} />
+              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  containerDark: {
+    backgroundColor: "#0F172A",
+  },
+  header: {
+    height: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(226, 232, 240, 0.6)",
+  },
+  headerDark: {
+    backgroundColor: "rgba(15, 23, 42, 0.85)",
+    borderBottomColor: "rgba(30, 41, 59, 0.6)",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logoContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "#0EA5E9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  brandText: {
+    fontSize: 11,
+    color: "#64748B",
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  textWhite: {
+    color: "#FFFFFF",
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notificationDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#EF4444",
+  },
+  content: {
+    flex: 1,
+  },
+  contentInner: {
+    paddingBottom: 100,
+  },
+  tabBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    flexDirection: "row",
+    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(226, 232, 240, 0.6)",
+  },
+  tabBarDark: {
+    backgroundColor: "rgba(15, 23, 42, 0.95)",
+    borderTopColor: "rgba(30, 41, 59, 0.6)",
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#94A3B8",
+  },
+  tabLabelActive: {
+    color: "#0EA5E9",
+  },
+  primaryTab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryTabInner: {
+    width: 48,
+    height: 48,
+    marginTop: -20,
+    borderRadius: 16,
+    backgroundColor: "#0EA5E9",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+});
 
 export default AppLayout;

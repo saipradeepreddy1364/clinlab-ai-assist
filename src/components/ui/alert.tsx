@@ -1,43 +1,69 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-
-import { cn } from "@/lib/utils";
-
-const alertVariants = cva(
-  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
-  {
-    variants: {
-      variant: {
-        default: "bg-background text-foreground",
-        destructive: "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
-);
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
 
 const Alert = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
->(({ className, variant, ...props }, ref) => (
-  <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props} />
+  View,
+  { variant?: "default" | "destructive"; style?: ViewStyle; children?: React.ReactNode }
+>(({ style, variant = "default", children, ...props }, ref) => (
+  <View
+    ref={ref}
+    style={[
+      styles.alert,
+      variant === "destructive" ? styles.destructive : styles.default,
+      style,
+    ]}
+    {...props}
+  >
+    {children}
+  </View>
 ));
 Alert.displayName = "Alert";
 
-const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h5 ref={ref} className={cn("mb-1 font-medium leading-none tracking-tight", className)} {...props} />
-  ),
+const AlertTitle = React.forwardRef<Text, { style?: TextStyle; children?: React.ReactNode }>(
+  ({ style, children, ...props }, ref) => (
+    <Text ref={ref} style={[styles.title, style]} {...props}>
+      {children}
+    </Text>
+  )
 );
 AlertTitle.displayName = "AlertTitle";
 
-const AlertDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("text-sm [&_p]:leading-relaxed", className)} {...props} />
-  ),
+const AlertDescription = React.forwardRef<Text, { style?: TextStyle; children?: React.ReactNode }>(
+  ({ style, children, ...props }, ref) => (
+    <Text ref={ref} style={[styles.description, style]} {...props}>
+      {children}
+    </Text>
+  )
 );
 AlertDescription.displayName = "AlertDescription";
+
+const styles = StyleSheet.create({
+  alert: {
+    position: "relative",
+    width: "100%",
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 16,
+  },
+  default: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E2E8F0",
+  },
+  destructive: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FEE2E2",
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 12,
+    color: "#64748B",
+    lineHeight: 18,
+  },
+});
 
 export { Alert, AlertTitle, AlertDescription };

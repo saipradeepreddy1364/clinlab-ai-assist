@@ -1,29 +1,66 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
-
-const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-  {
-    variants: {
-      variant: {
-        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
-);
-
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
-
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+export interface BadgeProps {
+  children?: React.ReactNode;
+  variant?: "default" | "secondary" | "destructive" | "outline";
+  style?: ViewStyle;
 }
 
-export { Badge, badgeVariants };
+function Badge({ children, variant = "default", style }: BadgeProps) {
+  return (
+    <View style={[styles.badge, styles[variant], style]}>
+      {typeof children === "string" ? (
+        <Text style={[styles.text, styles[`${variant}Text` as keyof typeof styles]]}>
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  badge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  text: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  
+  // Variants
+  default: {
+    backgroundColor: "#0F172A",
+  },
+  defaultText: {
+    color: "#FFFFFF",
+  },
+  secondary: {
+    backgroundColor: "#F1F5F9",
+  },
+  secondaryText: {
+    color: "#0F172A",
+  },
+  destructive: {
+    backgroundColor: "#EF4444",
+  },
+  destructiveText: {
+    color: "#FFFFFF",
+  },
+  outline: {
+    backgroundColor: "transparent",
+    borderColor: "#E2E8F0",
+  },
+  outlineText: {
+    color: "#0F172A",
+  },
+});
+
+export { Badge };

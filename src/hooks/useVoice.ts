@@ -1,35 +1,125 @@
-import 'regenerator-runtime/runtime';
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 
-export const useVoiceInput = (onResult: (text: string) => void) => {
+// Native voice is imported dynamically or guarded to prevent web crashes
+let Voice: any;
+if (Platform.OS !== 'web') {
+  try {
+    Voice = require('@react-native-voice/voice').default;
+  } catch (e) {
+    console.warn('Native Voice module not found');
+  }
+}
+
+export const useVoiceInput = (onResult?: (text: string) => void) => {
   const [isListening, setIsListening] = useState(false);
-  const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
+  const [recognizedText, setRecognizedText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Web Speech API setup
+  const [recognition, setRecognition] = useState<any>(null);
 
   useEffect(() => {
-    if (!listening && transcript) {
-      onResult(transcript);
-      resetTranscript();
-      setIsListening(false);
+    if (Platform.OS === 'web') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognitionInstance = new SpeechRecognition();
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = 'en-US';
+
+        recognitionInstance.onresult = (event: any) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+          const text = finalTranscript || interimTranscript;
+          setRecognizedText(text);
+          if (onResult) onResult(text);
+        };
+
+        recognitionInstance.onerror = (event: any) => {
+          setError(event.error);
+          setIsListening(false);
+        };
+
+        recognitionInstance.onend = () => {
+          setIsListening(false);
+        };
+
+        setRecognition(recognitionInstance);
+      }
+    } else if (Voice) {
+      Voice.onSpeechStart = () => setIsListening(true);
+      Voice.onSpeechEnd = () => setIsListening(false);
+      Voice.onSpeechError = (e: any) => {
+        setError(JSON.stringify(e.error));
+        setIsListening(false);
+      };
+      Voice.onSpeechResults = (e: any) => {
+        if (e.value && e.value.length > 0) {
+          const text = e.value[0];
+          setRecognizedText(text);
+          if (onResult) onResult(text);
+        }
+      };
+
+      return () => {
+        Voice.destroy().then(Voice.removeAllListeners);
+      };
     }
-  }, [listening, transcript, onResult, resetTranscript]);
+  }, [onResult]);
 
-  const startListening = () => {
-    resetTranscript();
-    setIsListening(true);
-    SpeechRecognition.startListening({ continuous: false });
-  };
+  const startListening = useCallback(async () => {
+    setError(null);
+    if (Platform.OS === 'web') {
+      if (recognition) {
+        try {
+          recognition.start();
+          setIsListening(true);
+        } catch (e) {
+          console.error('Speech recognition error:', e);
+        }
+      } else {
+        console.warn('Web Speech Recognition not supported');
+      }
+    } else if (Voice) {
+      try {
+        await Voice.start('en-US');
+      } catch (e) {
+        setError(JSON.stringify(e));
+      }
+    }
+  }, [recognition]);
 
-  const stopListening = () => {
-    SpeechRecognition.stopListening();
-    setIsListening(false);
-  };
+  const stopListening = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      if (recognition) {
+        recognition.stop();
+        setIsListening(false);
+      }
+    } else if (Voice) {
+      try {
+        await Voice.stop();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, [recognition]);
 
   return {
     isListening,
-    listening,
+    listening: isListening,
+    recognizedText,
+    error,
     startListening,
     stopListening,
-    browserSupportsSpeechRecognition
+    browserSupportsSpeechRecognition: !!recognition || Platform.OS !== 'web'
   };
 };

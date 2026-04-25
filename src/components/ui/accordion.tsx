@@ -1,52 +1,102 @@
 import * as React from "react";
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { ChevronDown } from "lucide-react";
+import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager, ViewStyle, TextStyle } from "react-native";
+import { ChevronDown } from "lucide-react-native";
 
-import { cn } from "@/lib/utils";
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
-const Accordion = AccordionPrimitive.Root;
+const AccordionContext = React.createContext<{
+  openValue?: string;
+  setOpenValue: (value: string) => void;
+  type: "single" | "multiple";
+}>({ setOpenValue: () => {}, type: "single" });
 
-const AccordionItem = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <AccordionPrimitive.Item ref={ref} className={cn("border-b", className)} {...props} />
-));
-AccordionItem.displayName = "AccordionItem";
+const Accordion = ({ 
+  children, 
+  type = "single", 
+  value, 
+  onValueChange 
+}: { 
+  children: React.ReactNode, 
+  type?: "single" | "multiple",
+  value?: string,
+  onValueChange?: (value: string) => void
+}) => {
+  const [internalValue, setInternalValue] = React.useState(value || "");
 
-const AccordionTrigger = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className,
-      )}
-      {...props}
+  const setOpenValue = (val: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    const newVal = internalValue === val ? "" : val;
+    setInternalValue(newVal);
+    onValueChange?.(newVal);
+  };
+
+  return (
+    <AccordionContext.Provider value={{ openValue: value || internalValue, setOpenValue, type }}>
+      <View style={styles.accordion}>{children}</View>
+    </AccordionContext.Provider>
+  );
+};
+
+const AccordionItem = ({ value, children, style }: { value: string, children: React.ReactNode, style?: ViewStyle }) => {
+  return <View style={[styles.item, style]}>{React.Children.map(children, child => 
+    React.isValidElement(child) ? React.cloneElement(child as React.ReactElement<any>, { value }) : child
+  )}</View>;
+};
+
+const AccordionTrigger = ({ value, children, style }: { value?: string, children: React.ReactNode, style?: ViewStyle }) => {
+  const { openValue, setOpenValue } = React.useContext(AccordionContext);
+  const isOpen = openValue === value;
+
+  return (
+    <TouchableOpacity 
+      onPress={() => value && setOpenValue(value)}
+      style={[styles.trigger, style]}
     >
+      <View style={styles.triggerContent}>{children}</View>
+      <ChevronDown 
+        size={16} 
+        color="#64748B" 
+        style={{ transform: [{ rotate: isOpen ? "180deg" : "0deg" }] }} 
+      />
+    </TouchableOpacity>
+  );
+};
+
+const AccordionContent = ({ value, children, style }: { value?: string, children: React.ReactNode, style?: ViewStyle }) => {
+  const { openValue } = React.useContext(AccordionContext);
+  const isOpen = openValue === value;
+
+  if (!isOpen) return null;
+
+  return (
+    <View style={[styles.content, style]}>
       {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-    </AccordionPrimitive.Trigger>
-  </AccordionPrimitive.Header>
-));
-AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName;
+    </View>
+  );
+};
 
-const AccordionContent = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Content
-    ref={ref}
-    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-    {...props}
-  >
-    <div className={cn("pb-4 pt-0", className)}>{children}</div>
-  </AccordionPrimitive.Content>
-));
-
-AccordionContent.displayName = AccordionPrimitive.Content.displayName;
+const styles = StyleSheet.create({
+  accordion: {
+    width: "100%",
+  },
+  item: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  trigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+  },
+  triggerContent: {
+    flex: 1,
+  },
+  content: {
+    paddingBottom: 16,
+  },
+});
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };

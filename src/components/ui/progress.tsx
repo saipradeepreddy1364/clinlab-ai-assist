@@ -1,23 +1,40 @@
 import * as React from "react";
-import * as ProgressPrimitive from "@radix-ui/react-progress";
+import { View, StyleSheet, ViewStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+export interface ProgressProps {
+  value?: number;
+  style?: ViewStyle;
+}
 
-const Progress = React.forwardRef<
-  React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => (
-  <ProgressPrimitive.Root
+const Progress = React.forwardRef<View, ProgressProps>(({ style, value = 0, ...props }, ref) => (
+  <View
     ref={ref}
-    className={cn("relative h-4 w-full overflow-hidden rounded-full bg-secondary", className)}
+    style={[styles.progress, style]}
     {...props}
   >
-    <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-primary transition-all"
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+    <View
+      style={[
+        styles.indicator,
+        { width: `${Math.min(100, Math.max(0, value))}%` }
+      ]}
     />
-  </ProgressPrimitive.Root>
+  </View>
 ));
-Progress.displayName = ProgressPrimitive.Root.displayName;
+Progress.displayName = "Progress";
+
+const styles = StyleSheet.create({
+  progress: {
+    position: "relative",
+    height: 8,
+    width: "100%",
+    overflow: "hidden",
+    borderRadius: 9999,
+    backgroundColor: "#F1F5F9",
+  },
+  indicator: {
+    height: "100%",
+    backgroundColor: "#0EA5E9",
+  },
+});
 
 export { Progress };

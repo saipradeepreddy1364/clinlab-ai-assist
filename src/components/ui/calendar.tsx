@@ -1,54 +1,142 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from "react-native";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, eachDayOfInterval } from "date-fns";
 
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+export type CalendarProps = {
+  selected?: Date;
+  onSelect?: (date: Date) => void;
+  style?: ViewStyle;
+};
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+function Calendar({ selected, onSelect, style }: CalendarProps) {
+  const [currentMonth, setCurrentMonth] = React.useState(new Date());
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+  const days = React.useMemo(() => {
+    const start = startOfWeek(startOfMonth(currentMonth));
+    const end = endOfWeek(endOfMonth(currentMonth));
+    return eachDayOfInterval({ start, end });
+  }, [currentMonth]);
+
+  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+  const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+
   return (
-    <DayPicker
-      showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
-      classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-        ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
-        day_range_end: "day-range-end",
-        day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_hidden: "invisible",
-        ...classNames,
-      }}
-      components={{
-        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
-      }}
-      {...props}
-    />
+    <View style={[styles.container, style]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={prevMonth} style={styles.navButton}>
+          <ChevronLeft size={18} color="#0F172A" />
+        </TouchableOpacity>
+        <Text style={styles.monthLabel}>{format(currentMonth, "MMMM yyyy")}</Text>
+        <TouchableOpacity onPress={nextMonth} style={styles.navButton}>
+          <ChevronRight size={18} color="#0F172A" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.weekDays}>
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
+          <Text key={d} style={styles.weekDayText}>{d}</Text>
+        ))}
+      </View>
+      <View style={styles.daysGrid}>
+        {days.map((day, i) => {
+          const isSelected = selected && isSameDay(day, selected);
+          const isCurrentMonth = isSameMonth(day, currentMonth);
+          const isToday = isSameDay(day, new Date());
+
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => onSelect?.(day)}
+              style={[
+                styles.dayCell,
+                isSelected && styles.selectedDay,
+                !isCurrentMonth && styles.outsideDay
+              ]}
+            >
+              <Text style={[
+                styles.dayText,
+                isSelected && styles.selectedDayText,
+                isToday && !isSelected && styles.todayText,
+                !isCurrentMonth && styles.outsideDayText
+              ]}>
+                {format(day, "d")}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
   );
 }
-Calendar.displayName = "Calendar";
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  navButton: {
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  monthLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  weekDays: {
+    flexDirection: "row",
+    marginBottom: 8,
+  },
+  weekDayText: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  daysGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  dayCell: {
+    width: "14.28%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  dayText: {
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  selectedDay: {
+    backgroundColor: "#0EA5E9",
+  },
+  selectedDayText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  todayText: {
+    color: "#0EA5E9",
+    fontWeight: "700",
+  },
+  outsideDay: {
+    opacity: 0.3,
+  },
+  outsideDayText: {
+    color: "#64748B",
+  },
+});
 
 export { Calendar };

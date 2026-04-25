@@ -1,28 +1,52 @@
-import { NavLink as RouterNavLink, NavLinkProps } from "react-router-dom";
-import { forwardRef } from "react";
+import React from "react";
+import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { cn } from "@/lib/utils";
 
-interface NavLinkCompatProps extends Omit<NavLinkProps, "className"> {
-  className?: string;
+interface NavLinkProps {
+  to: string;
+  children: React.ReactNode;
+  className?: string; // Kept for compatibility during migration
   activeClassName?: string;
-  pendingClassName?: string;
+  style?: any;
 }
 
-const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
-  ({ className, activeClassName, pendingClassName, to, ...props }, ref) => {
-    return (
-      <RouterNavLink
-        ref={ref}
-        to={to}
-        className={({ isActive, isPending }) =>
-          cn(className, isActive && activeClassName, isPending && pendingClassName)
-        }
-        {...props}
-      />
-    );
-  },
-);
+const NavLink = ({ to, children, style, ...props }: NavLinkProps) => {
+  const navigation = useNavigation<any>();
+  const route = useRoute();
+  
+  // Logic to determine if 'to' matches current route
+  // In RN, 'to' is usually the screen name
+  const isActive = route.name === to;
 
-NavLink.displayName = "NavLink";
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate(to)}
+      style={[style, isActive && styles.active]}
+      {...props}
+    >
+      {typeof children === 'string' ? (
+        <Text style={isActive ? styles.activeText : styles.inactiveText}>
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  active: {
+    opacity: 1,
+  },
+  activeText: {
+    color: "#0EA5E9",
+    fontWeight: "600",
+  },
+  inactiveText: {
+    color: "#94A3B8",
+  }
+});
 
 export { NavLink };
