@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Bell, X, Info, AlertTriangle, CheckCircle2, Clock, Sparkles } from "lucide-react-native";
-import { SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
+import { SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { supabase } from "@/lib/supabase";
 
 type Notification = {
