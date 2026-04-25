@@ -116,19 +116,41 @@ const AIEngine = () => {
         Share your clinical findings or the current procedure step to get AI-validated guidance.
       </p>
 
-      <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Clinical thoughts / condition</Label>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
-          className="w-full min-h-[120px] rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-smooth"
-        />
+      <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-4">
+        {!isGuest && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Main Symptoms</Label>
+              <Input 
+                placeholder="Pain, Swelling..." 
+                className="rounded-xl h-10 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Current Stage</Label>
+              <Input 
+                placeholder="Access, Prep..." 
+                className="rounded-xl h-10 text-sm"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Clinical thoughts / condition</Label>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
+            className="w-full min-h-[100px] rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-smooth"
+          />
+        </div>
+
         <Button
           variant="hero"
           size="lg"
           onClick={handleSuggest}
-          className="w-full"
+          className="w-full h-12"
           disabled={loading}
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
@@ -139,7 +161,7 @@ const AIEngine = () => {
       {output && !loading && (
         <div className="space-y-4 animate-fade-up">
           {/* Diagnosis card */}
-          <Card className="rounded-2xl p-4 border-2 border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 shadow-glow">
+          <Card className="rounded-2xl p-4 border-2 border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 shadow-glow text-left">
             <div className="flex items-center justify-between gap-2 mb-2">
               <p className="text-[10px] uppercase tracking-wider text-accent font-semibold">Suggested diagnosis</p>
               <Badge className={`${confidenceColors[output.confidence]} border-0 rounded-full px-2 py-0.5 text-[10px]`}>

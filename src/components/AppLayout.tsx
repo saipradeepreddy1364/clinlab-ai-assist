@@ -144,7 +144,7 @@ const AppLayout = () => {
         </main>
 
         {/* Bottom tab bar */}
-        <nav className="absolute bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/60 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] grid grid-cols-5 gap-1">
+        <nav className="absolute bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/60 px-2 pt-1.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] grid grid-cols-5 gap-1">
           {tabs.map((t) => (
             <NavLink
               key={t.to}
