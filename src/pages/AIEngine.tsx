@@ -6,15 +6,18 @@ import {
   ShieldCheck,
   Wrench,
   FlaskConical,
+  Mic,
   ArrowRight,
   Loader2,
 } from "lucide-react";
+import { useVoiceInput } from "@/hooks/useVoice";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type Output = {
   diagnosis: string;
@@ -79,8 +82,14 @@ const confidenceColors: Record<Output["confidence"], string> = {
 const AIEngine = () => {
   const [isGuest, setIsGuest] = useState(false);
   const [input, setInput] = useState("");
+  const [symptoms, setSymptoms] = useState("");
+  const [stage, setStage] = useState("");
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const { isListening, startListening, stopListening } = useVoiceInput((text) => {
+    setInput(prev => prev + (prev ? " " : "") + text);
+  });
 
   useEffect(() => {
     const guest = localStorage.getItem("guestMode") === "true";
@@ -116,47 +125,97 @@ const AIEngine = () => {
         Share your clinical findings or the current procedure step to get AI-validated guidance.
       </p>
 
-      <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-4">
-        {!isGuest && (
+      {/* Entry area */}
+      {!isGuest ? (
+        <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Main Symptoms</Label>
-              <Input 
-                placeholder="Pain, Swelling..." 
-                className="rounded-xl h-10 text-sm"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Current Stage</Label>
-              <Input 
-                placeholder="Access, Prep..." 
-                className="rounded-xl h-10 text-sm"
-              />
-            </div>
+            <Card className="p-3 rounded-2xl shadow-card border-border/60 bg-card/50">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Symptoms</Label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  placeholder="Pain, swelling..." 
+                  className="rounded-xl h-9 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
+                  value={symptoms}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                />
+              </div>
+            </Card>
+            <Card className="p-3 rounded-2xl shadow-card border-border/60 bg-card/50">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Procedure Stage</Label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  placeholder="Access, Cleaning..." 
+                  className="rounded-xl h-9 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
+                  value={stage}
+                  onChange={(e) => setStage(e.target.value)}
+                />
+              </div>
+            </Card>
           </div>
-        )}
 
-        <div className="space-y-1.5">
-          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Clinical thoughts / condition</Label>
+          <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Clinical thoughts / condition</Label>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={cn("rounded-full h-8 px-3 gap-1.5 text-xs transition-smooth", isListening && "bg-urgent/10 border-urgent text-urgent")}
+                onClick={isListening ? stopListening : startListening}
+              >
+                <Mic className={cn("w-3.5 h-3.5", isListening && "animate-pulse")} />
+                {isListening ? "Listening..." : "Voice"}
+              </Button>
+            </div>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
+              className="w-full min-h-[120px] rounded-xl border-0 bg-transparent p-0 text-sm focus-visible:outline-none resize-none transition-smooth"
+            />
+            <Button
+              variant="hero"
+              size="lg"
+              onClick={handleSuggest}
+              className="w-full h-12 rounded-2xl"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Get AI Guidance
+            </Button>
+          </Card>
+        </div>
+      ) : (
+        <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Current Step / Thought</Label>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn("rounded-full h-8 px-3 gap-1.5 text-xs transition-smooth", isListening && "bg-urgent/10 border-urgent text-urgent")}
+              onClick={isListening ? stopListening : startListening}
+            >
+              <Mic className={cn("w-3.5 h-3.5", isListening && "animate-pulse")} />
+              {isListening ? "Listening..." : "Voice"}
+            </Button>
+          </div>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
-            className="w-full min-h-[100px] rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-smooth"
+            placeholder="What step are you performing right now?"
+            className="w-full min-h-[100px] rounded-xl border-0 bg-transparent p-0 text-sm focus-visible:outline-none resize-none transition-smooth"
           />
-        </div>
-
-        <Button
-          variant="hero"
-          size="lg"
-          onClick={handleSuggest}
-          className="w-full h-12"
-          disabled={loading}
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-          Get AI Guidance
-        </Button>
-      </Card>
+          <Button
+            variant="hero"
+            size="lg"
+            onClick={handleSuggest}
+            className="w-full h-12 rounded-2xl"
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+            Get Guidance
+          </Button>
+        </Card>
+      )}
 
       {output && !loading && (
         <div className="space-y-4 animate-fade-up">

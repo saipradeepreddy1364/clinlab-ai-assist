@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useVoiceInput } from "@/hooks/useVoice";
 
 const symptomOptions = ["Pain", "Swelling", "Sensitivity", "Sinus tract", "Mobility", "Bleeding"];
 
@@ -30,6 +31,10 @@ const NewCase = () => {
     tooth_number: "",
     chief_complaint: "",
     notes: "",
+  });
+
+  const { isListening, startListening, stopListening } = useVoiceInput((text) => {
+    setFormData(prev => ({ ...prev, notes: prev.notes + (prev.notes ? " " : "") + text }));
   });
 
   const toggle = (s: string) =>
@@ -173,8 +178,15 @@ const NewCase = () => {
         <Card className="rounded-2xl p-4 shadow-card border-border/60 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display font-semibold text-sm uppercase tracking-wider text-muted-foreground">Clinical notes</h2>
-            <Button type="button" variant="outline" size="sm" className="rounded-full gap-1.5 h-8 text-xs">
-              <Mic className="w-3.5 h-3.5" /> Voice
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              className={cn("rounded-full gap-1.5 h-8 text-xs transition-smooth", isListening && "bg-urgent/10 border-urgent text-urgent")}
+              onClick={isListening ? stopListening : startListening}
+            >
+              <Mic className={cn("w-3.5 h-3.5", isListening && "animate-pulse")} /> 
+              {isListening ? "Listening..." : "Voice"}
             </Button>
           </div>
           <Textarea
