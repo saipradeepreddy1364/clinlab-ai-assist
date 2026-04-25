@@ -61,6 +61,9 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
         <View style={styles.titleRow}>
           <Bell size={20} color="#0F172A" />
           <SheetTitle style={styles.title}>Notifications</SheetTitle>
+          <SheetDescription style={{ display: "none" }}>
+            View your recent clinical updates and alerts.
+          </SheetDescription>
         </View>
         <TouchableOpacity onPress={() => setNotifications([])}>
           <Text style={styles.clearAll}>Clear all</Text>

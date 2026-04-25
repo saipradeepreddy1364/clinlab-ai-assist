@@ -1,7 +1,7 @@
 import * as React from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ViewStyle, TextStyle } from "react-native";
 import { Search } from "lucide-react-native";
-import { Dialog, DialogContent } from "./dialog";
+import { Dialog, DialogContent, DialogDescription } from "./dialog";
 
 const Command = ({ children, style }: { children: React.ReactNode, style?: ViewStyle }) => {
   return <View style={[styles.command, style]}>{children}</View>;
@@ -11,6 +11,9 @@ const CommandDialog = ({ children, open, onOpenChange }: { children: React.React
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent style={styles.dialogContent}>
+        <DialogDescription style={{ display: "none" }}>
+          Search for actions or tools.
+        </DialogDescription>
         <Command>
           {children}
         </Command>

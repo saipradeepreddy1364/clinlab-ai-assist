@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Sparkles, Mic, X, Loader2, ChevronDown } from "lucide-react-native";
+import { Mic, X, Loader2, ChevronDown } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import { useVoiceInput } from "@/hooks/useVoice";
 import AppLayout from "@/components/AppLayout";
