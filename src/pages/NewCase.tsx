@@ -57,9 +57,9 @@ const NewCase = () => {
       ]);
 
       if (error) throw error;
-      navigation.navigate("AIEngine");
+      navigation.navigate("Dashboard");
     } catch (error: any) {
-      navigation.navigate("AIEngine");
+      navigation.navigate("Dashboard");
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ const NewCase = () => {
   return (
     <AppLayout>
       <View style={styles.container}>
-        <Text style={styles.description}>Capture clinical findings — AI will structure the rest.</Text>
+        <Text style={styles.description}>Capture clinical findings for the patient.</Text>
 
         <View style={styles.form}>
           <View style={styles.card}>
@@ -188,8 +188,7 @@ const NewCase = () => {
                 <Loader2 size={18} color="#FFFFFF" />
               ) : (
                 <View style={styles.buttonInner}>
-                  <Sparkles size={16} color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Analyze with AI</Text>
+                  <Text style={styles.submitButtonText}>Add Case</Text>
                 </View>
               )}
             </TouchableOpacity>

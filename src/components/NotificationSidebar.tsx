@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
-import { Bell, X, Info, AlertTriangle, CheckCircle2, Clock } from "lucide-react-native";
+import { Bell, X, Info, AlertTriangle, CheckCircle2, Clock, Sparkles } from "lucide-react-native";
 import { SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { supabase } from "@/lib/supabase";
 
@@ -15,11 +15,21 @@ type Notification = {
 
 export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [userName, setUserName] = useState("Doctor");
+  const [greeting, setGreeting] = useState("Good morning");
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
+  }, []);
 
   useEffect(() => {
     const fetchRecentChanges = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserName(user.user_metadata.full_name || "Doctor");
 
       // Fetch recent cases to simulate notifications
       const { data: cases } = await supabase
@@ -68,6 +78,19 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
       </SheetHeader>
 
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+        <View style={styles.welcomeCard}>
+          <View style={styles.welcomeContent}>
+            <View style={styles.todayBadge}>
+              <Sparkles size={10} color="#FFFFFF" />
+              <Text style={styles.todayText}>Clinical Assistant</Text>
+            </View>
+            <Text style={styles.greetingText}>
+              {greeting}, Dr. {userName}
+            </Text>
+            <Text style={styles.welcomeSubtitle}>Check your latest updates here.</Text>
+          </View>
+        </View>
+
         {notifications.length > 0 ? (
           notifications.map((n) => (
             <View key={n.id} style={[styles.notificationItem, !n.read && styles.unreadItem]}>
@@ -201,5 +224,42 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     lineHeight: 20,
+  },
+  welcomeCard: {
+    margin: 16,
+    borderRadius: 20,
+    backgroundColor: "#0EA5E9",
+    padding: 16,
+    overflow: "hidden",
+  },
+  welcomeContent: {
+    zIndex: 10,
+  },
+  todayBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+    gap: 4,
+  },
+  todayText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  greetingText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  welcomeSubtitle: {
+    color: "rgba(255, 255, 255, 0.85)",
+    fontSize: 12,
+    marginTop: 4,
   },
 });
