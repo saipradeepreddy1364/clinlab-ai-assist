@@ -546,8 +546,6 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   fileList: {
-    divideY: 1,
-    divideColor: "#F1F5F9",
   },
   fileItem: {
     flexDirection: "row",
