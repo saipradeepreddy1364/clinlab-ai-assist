@@ -22,6 +22,15 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useNotifications } from "@/hooks/useNotifications";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useState } from "react";
 
 const tabs = [
   { to: "/", label: "Home", icon: LayoutDashboard, end: true },
@@ -44,6 +53,9 @@ const AppLayout = () => {
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [hasNewNotifications, setHasNewNotifications] = useState(true);
+  
+  useNotifications();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -131,10 +143,40 @@ const AppLayout = () => {
             <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-full h-9 w-9 text-muted-foreground">
               <LogOut className="w-4 h-4" />
             </Button>
-            <button className="relative w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-smooth">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-urgent" />
-            </button>
+            <Sheet onOpenChange={(open) => { if(open) setHasNewNotifications(false); }}>
+              <SheetTrigger asChild>
+                <button className="relative w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-smooth">
+                  <Bell className="w-4 h-4" />
+                  {hasNewNotifications && (
+                    <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-urgent animate-pulse" />
+                  )}
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] rounded-l-[2rem]">
+                <SheetHeader className="pb-4 border-b">
+                  <SheetTitle className="font-display font-bold">Notifications</SheetTitle>
+                </SheetHeader>
+                <div className="py-6 space-y-4">
+                  <div className="p-4 rounded-2xl bg-muted/30 border border-border/60">
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">Welcome to ClinLab AI</p>
+                        <p className="text-xs text-muted-foreground">Your real-time notification center is now active.</p>
+                        <p className="text-[10px] text-primary font-medium mt-1">Just now</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p className="text-sm">No new alerts.</p>
+                    <p className="text-[10px] mt-1">New cases will appear here in real-time.</p>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </header>
 
