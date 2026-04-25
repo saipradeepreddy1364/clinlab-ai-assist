@@ -20,6 +20,7 @@ import { useTheme } from "./ThemeProvider";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useNotifications } from "@/hooks/useNotifications";
+import { NotificationSidebar } from "./NotificationSidebar";
 
 const { width } = Dimensions.get("window");
 
@@ -45,6 +46,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
   useNotifications();
 
@@ -98,7 +100,10 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
             <LogOut size={18} color="#64748B" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity 
+            onPress={() => setIsNotificationsOpen(true)}
+            style={styles.iconButton}
+          >
             <Bell size={18} color={isDark ? "#FFFFFF" : "#0F172A"} />
             {hasNewNotifications && <View style={styles.notificationDot} />}
           </TouchableOpacity>
@@ -109,6 +114,12 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
         {children}
       </ScrollView>
+
+      {/* Notifications Sidebar */}
+      <NotificationSidebar 
+        open={isNotificationsOpen} 
+        onOpenChange={setIsNotificationsOpen} 
+      />
 
       {/* Bottom tab bar */}
       <View style={[styles.tabBar, isDark && styles.tabBarDark]}>

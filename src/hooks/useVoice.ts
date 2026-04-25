@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 
 // Native voice is imported dynamically or guarded to prevent web crashes
@@ -18,6 +18,12 @@ export const useVoiceInput = (onResult?: (text: string) => void) => {
 
   // Web Speech API setup
   const [recognition, setRecognition] = useState<any>(null);
+  
+  // Use a ref for onResult to avoid re-triggering the effect
+  const onResultRef = useRef(onResult);
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -40,11 +46,14 @@ export const useVoiceInput = (onResult?: (text: string) => void) => {
             }
           }
           const text = finalTranscript || interimTranscript;
-          setRecognizedText(text);
-          if (onResult) onResult(text);
+          if (text) {
+            setRecognizedText(text);
+            if (onResultRef.current) onResultRef.current(text);
+          }
         };
 
         recognitionInstance.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
           setError(event.error);
           setIsListening(false);
         };
@@ -66,7 +75,7 @@ export const useVoiceInput = (onResult?: (text: string) => void) => {
         if (e.value && e.value.length > 0) {
           const text = e.value[0];
           setRecognizedText(text);
-          if (onResult) onResult(text);
+          if (onResultRef.current) onResultRef.current(text);
         }
       };
 
@@ -74,7 +83,7 @@ export const useVoiceInput = (onResult?: (text: string) => void) => {
         Voice.destroy().then(Voice.removeAllListeners);
       };
     }
-  }, [onResult]);
+  }, []); // Only run once
 
   const startListening = useCallback(async () => {
     setError(null);
@@ -84,7 +93,7 @@ export const useVoiceInput = (onResult?: (text: string) => void) => {
           recognition.start();
           setIsListening(true);
         } catch (e) {
-          console.error('Speech recognition error:', e);
+          console.error('Speech recognition start error:', e);
         }
       } else {
         console.warn('Web Speech Recognition not supported');

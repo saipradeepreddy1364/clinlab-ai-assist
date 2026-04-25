@@ -84,9 +84,11 @@ const AIEngine = () => {
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { isListening, startListening, stopListening } = useVoiceInput((text) => {
-    setInput(prev => prev + (prev ? " " : "") + text);
-  });
+  const onVoiceResult = React.useCallback((text: string) => {
+    setInput(text);
+  }, []);
+
+  const { isListening, startListening, stopListening } = useVoiceInput(onVoiceResult);
 
   useEffect(() => {
     const checkGuest = async () => {
