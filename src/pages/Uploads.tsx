@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2, Calendar, User, ClipboardList } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2, Calendar, User, ClipboardList, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,10 @@ const Uploads = () => {
   const [loading, setLoading] = useState(true);
   const [drag, setDrag] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [patients, setPatients] = useState<{ id: string; patient_name: string }[]>([]);
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [isAddingNew, setIsAddingNew] = useState(false);
 
   // Metadata form state
   const [metadata, setMetadata] = useState({
@@ -95,6 +100,15 @@ const Uploads = () => {
     };
 
     fetchFiles();
+
+    const fetchPatients = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('cases').select('id, patient_name').eq('doctor_id', user.id);
+        if (data) setPatients(data);
+      }
+    };
+    fetchPatients();
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,17 +224,47 @@ const Uploads = () => {
         <Card className="p-5 rounded-3xl shadow-card border-border/60 bg-card/50 backdrop-blur-sm space-y-5">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="patientName" className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
-                <User className="w-3.5 h-3.5" /> Full Name
+              <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                <User className="w-3.5 h-3.5" /> Select Patient
               </Label>
-              <Input
-                id="patientName"
-                placeholder="Dr. Jayasimha Mummadi..."
-                className="rounded-2xl bg-background border-border/40 h-12 text-base focus:ring-primary/20"
-                value={metadata.patientName}
-                onChange={(e) => setMetadata({ ...metadata, patientName: e.target.value })}
-              />
+              <Select
+                value={isAddingNew ? "New Patient" : metadata.patientName}
+                onValueChange={(v) => {
+                  if (v === "New Patient") {
+                    setIsAddingNew(true);
+                    setMetadata({ ...metadata, patientName: "" });
+                  } else {
+                    setIsAddingNew(false);
+                    setMetadata({ ...metadata, patientName: v });
+                  }
+                }}
+              >
+                <SelectTrigger className="rounded-2xl bg-background border-border/40 h-12">
+                  <SelectValue placeholder="Select existing patient" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {patients.map(p => (
+                    <SelectItem key={p.id} value={p.patient_name}>{p.patient_name}</SelectItem>
+                  ))}
+                  <SelectItem value="New Patient">+ Add New Name</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {isAddingNew && (
+              <div className="space-y-2 animate-fade-in">
+                <Label htmlFor="patientName" className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                  <User className="w-3.5 h-3.5" /> New Patient Name
+                </Label>
+                <Input
+                  id="patientName"
+                  placeholder="Enter patient name..."
+                  className="rounded-2xl bg-background border-border/40 h-12 text-base focus:ring-primary/20"
+                  value={metadata.patientName}
+                  onChange={(e) => setMetadata({ ...metadata, patientName: e.target.value })}
+                />
+              </div>
+            )}
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -298,9 +342,18 @@ const Uploads = () => {
       </div>
 
       <Card className="rounded-2xl shadow-card border-border/60 overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <h3 className="font-display font-semibold text-sm uppercase tracking-wider text-muted-foreground">Recent uploads</h3>
-          <span className="text-xs text-muted-foreground">{files.length} files</span>
+        <div className="p-4 border-b border-border flex items-center justify-between gap-4">
+          <h3 className="font-display font-semibold text-sm uppercase tracking-wider text-muted-foreground whitespace-nowrap">Recent uploads</h3>
+          <div className="relative flex-1 max-w-[200px]">
+            <Input 
+              placeholder="Search..." 
+              className="h-8 text-xs rounded-full pl-7" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          </div>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{files.length} files</span>
         </div>
         <div className="divide-y divide-border">
           {loading ? (
@@ -309,7 +362,13 @@ const Uploads = () => {
               <p className="text-xs">Fetching files...</p>
             </div>
           ) : files.length > 0 ? (
-            files.map((f, i) => {
+            files
+              .filter(f => 
+                !searchQuery || 
+                f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                f.patientName?.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((f, i) => {
               const Icon = iconMap[f.type] || FileText;
               return (
                 <div key={i} className="p-4 flex items-center gap-3 group hover:bg-muted/30 transition-smooth cursor-pointer" onClick={() => handleFileClick(f)}>

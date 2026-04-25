@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Search, Plus, AlertCircle, Loader2 } from "lucide-react";
+import { Search, Plus, AlertCircle, Loader2, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 
 const Patients = () => {
+  const navigate = useNavigate();
   const [cases, setCases] = useState<any[]>([]);
+  const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -31,6 +33,25 @@ const Patients = () => {
 
         if (!error && data) {
           setCases(data);
+        }
+
+        // Fetch file counts from storage
+        const { data: files } = await supabase.storage
+          .from('clinical-files')
+          .list(user.id);
+        
+        if (files) {
+          const counts: Record<string, number> = {};
+          files.forEach(f => {
+            const parts = f.name.split('--');
+            if (parts.length > 1) {
+              const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
+              if (pName) {
+                counts[pName] = (counts[pName] || 0) + 1;
+              }
+            }
+          });
+          setFileCounts(counts);
         }
       }
       setLoading(false);
@@ -73,32 +94,48 @@ const Patients = () => {
           </div>
         ) : filteredCases.length > 0 ? (
           filteredCases.map((p) => (
-            <Link key={p.id} to={`/patients/${p.id}`}>
-              <Card className="p-4 rounded-2xl shadow-card border-border/60 active:scale-[0.99] transition-smooth flex items-center gap-3">
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold flex-shrink-0 ${
-                    p.is_urgent ? "bg-urgent/10 text-urgent" : "gradient-soft text-primary"
-                  }`}
-                >
-                  {p.patient_name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm truncate">{p.patient_name}</p>
-                    {p.is_urgent && <AlertCircle className="w-3.5 h-3.5 text-urgent flex-shrink-0" />}
+            <div key={p.id} className="relative group">
+              <Link to={`/patients/${p.id}`}>
+                <Card className="p-4 rounded-2xl shadow-card border-border/60 active:scale-[0.99] transition-smooth flex items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold flex-shrink-0 ${
+                      p.is_urgent ? "bg-urgent/10 text-urgent" : "gradient-soft text-primary"
+                    }`}
+                  >
+                    {p.patient_name.charAt(0)}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">Tooth {p.tooth_number} · {p.diagnosis}</p>
-                </div>
-                <Badge
-                  variant="outline"
-                  className={`rounded-full text-[10px] flex-shrink-0 capitalize ${
-                    p.is_urgent ? "border-urgent/30 text-urgent bg-urgent/5" : ""
-                  }`}
-                >
-                  {p.status.replace('-', ' ')}
-                </Badge>
-              </Card>
-            </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm truncate">{p.patient_name}</p>
+                      {p.is_urgent && <AlertCircle className="w-3.5 h-3.5 text-urgent flex-shrink-0" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">Tooth {p.tooth_number} · {p.diagnosis}</p>
+                    
+                    {fileCounts[p.patient_name] && (
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate(`/uploads?search=${encodeURIComponent(p.patient_name)}`);
+                        }}
+                        className="flex items-center gap-1 mt-1.5 text-[10px] font-medium text-primary hover:underline"
+                      >
+                        <FileText className="w-3 h-3" />
+                        {fileCounts[p.patient_name]} reports available
+                      </button>
+                    )}
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`rounded-full text-[10px] flex-shrink-0 capitalize ${
+                      p.is_urgent ? "border-urgent/30 text-urgent bg-urgent/5" : ""
+                    }`}
+                  >
+                    {p.status.replace('-', ' ')}
+                  </Badge>
+                </Card>
+              </Link>
+            </div>
           ))
         ) : (
           <div className="text-center py-12 bg-muted/20 rounded-3xl border-2 border-dashed border-border/60">

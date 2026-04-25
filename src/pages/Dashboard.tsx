@@ -212,19 +212,6 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Quick upload nudge */}
-          <Link to="/uploads">
-            <Card className="p-4 rounded-2xl border-dashed border-2 border-border/80 bg-muted/30 flex items-center gap-3 active:scale-[0.99] transition-smooth">
-              <div className="w-10 h-10 rounded-xl gradient-soft flex items-center justify-center">
-                <Upload className="w-4 h-4 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-sm">Upload X-rays or reports</p>
-                <p className="text-xs text-muted-foreground">Bulk upload, auto-linked to patient</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Card>
-          </Link>
         </>
       )}
     </div>
