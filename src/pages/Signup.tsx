@@ -107,10 +107,12 @@ const Signup = () => {
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full name</Text>
+            <Text style={styles.label}>
+              {authType === "organization" ? "Organization Name" : "Full name"}
+            </Text>
             <TextInput
               style={styles.input}
-              placeholder="Dr. Aarav Singh"
+              placeholder={authType === "organization" ? "e.g. City Dental Clinic" : "Dr. Aarav Singh"}
               value={formData.name}
               onChangeText={(v) => setFormData({ ...formData, name: v })}
               placeholderTextColor="#94A3B8"
