@@ -7,12 +7,17 @@ import { supabase } from "@/lib/supabase";
 const Signup = () => {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
+  const [authType, setAuthType] = useState<"doctor" | "organization">("doctor");
+  const [organizations, setOrganizations] = useState<any[]>([]);
   const [roleModalVisible, setRoleModalVisible] = useState(false);
+  const [orgModalVisible, setOrgModalVisible] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     password: "",
+    specialization: "",
+    organization: { id: "", name: "" },
     role: "dentist",
   });
 
@@ -22,6 +27,17 @@ const Signup = () => {
         navigation.navigate("Dashboard");
       }
     });
+
+    const fetchOrgs = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'organization');
+      
+      if (data) setOrganizations(data);
+    };
+
+    fetchOrgs();
   }, [navigation]);
 
   const handleSignup = async () => {
@@ -35,7 +51,11 @@ const Signup = () => {
           data: {
             full_name: formData.name,
             phone: formData.phone,
-            role: formData.role,
+            role: authType,
+            status: authType === "organization" ? "approved" : "pending",
+            specialization: authType === "doctor" ? formData.specialization : null,
+            org_id: authType === "doctor" ? formData.organization.id : null,
+            org_name: authType === "doctor" ? formData.organization.name : null,
           },
         },
       });
@@ -67,7 +87,22 @@ const Signup = () => {
 
         <View style={styles.hero}>
           <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>Start streamlining your clinical workflow.</Text>
+          <Text style={styles.subtitle}>Choose your account type to continue.</Text>
+        </View>
+
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, authType === "doctor" && styles.tabActive]}
+            onPress={() => setAuthType("doctor")}
+          >
+            <Text style={[styles.tabText, authType === "doctor" && styles.tabTextActive]}>Doctor</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, authType === "organization" && styles.tabActive]}
+            onPress={() => setAuthType("organization")}
+          >
+            <Text style={[styles.tabText, authType === "organization" && styles.tabTextActive]}>Organization</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.form}>
@@ -120,16 +155,46 @@ const Signup = () => {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Role</Text>
-            <TouchableOpacity 
-              style={styles.pickerTrigger}
-              onPress={() => setRoleModalVisible(true)}
-            >
-              <Text style={styles.pickerValue}>{formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}</Text>
-              <ChevronDown size={18} color="#64748B" />
-            </TouchableOpacity>
-          </View>
+          {authType === "doctor" && (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Specialization</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Orthodontist"
+                  value={formData.specialization}
+                  onChangeText={(v) => setFormData({ ...formData, specialization: v })}
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Select Organization</Text>
+                <TouchableOpacity 
+                  style={styles.pickerTrigger}
+                  onPress={() => setOrgModalVisible(true)}
+                >
+                  <Text style={styles.pickerValue}>
+                    {formData.organization.name || "Choose Clinic/Hospital"}
+                  </Text>
+                  <ChevronDown size={18} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {authType === "doctor" && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Clinical Role</Text>
+              <TouchableOpacity 
+                style={styles.pickerTrigger}
+                onPress={() => setRoleModalVisible(true)}
+              >
+                <Text style={styles.pickerValue}>{formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}</Text>
+                <ChevronDown size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+          )}
 
           <TouchableOpacity 
             style={[styles.heroButton, loading && styles.buttonDisabled]} 
@@ -154,7 +219,8 @@ const Signup = () => {
       <Modal visible={roleModalVisible} transparent animationType="slide">
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setRoleModalVisible(false)}>
           <View style={styles.modalContent}>
-            {["dentist", "assistant", "admin"].map(v => (
+            <Text style={styles.modalHeader}>Select Clinical Role</Text>
+            {["dentist", "assistant", "therapist"].map(v => (
               <TouchableOpacity 
                 key={v} 
                 style={styles.modalOption}
@@ -166,6 +232,32 @@ const Signup = () => {
                 <Text style={styles.modalOptionText}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
               </TouchableOpacity>
             ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal visible={orgModalVisible} transparent animationType="slide">
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setOrgModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalHeader}>Registered Organizations</Text>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {organizations.length > 0 ? (
+                organizations.map(org => (
+                  <TouchableOpacity 
+                    key={org.id} 
+                    style={styles.modalOption}
+                    onPress={() => {
+                      setFormData({ ...formData, organization: { id: org.id, name: org.full_name } });
+                      setOrgModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.modalOptionText}>{org.full_name}</Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.noData}>No organizations found. They must register first.</Text>
+              )}
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -215,6 +307,36 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 20,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    padding: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  tabTextActive: {
+    color: "#0EA5E9",
   },
   inputGroup: {
     gap: 8,
@@ -297,7 +419,18 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    gap: 8,
+    gap: 12,
+  },
+  modalHeader: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 8,
+  },
+  noData: {
+    textAlign: "center",
+    color: "#64748B",
+    padding: 20,
   },
   modalOption: {
     height: 54,

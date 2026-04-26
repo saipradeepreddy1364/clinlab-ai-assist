@@ -36,6 +36,8 @@ const Dashboard = () => {
   const [recentCases, setRecentCases] = useState<any[]>([]);
   const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<"doctor" | "organization">("doctor");
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,11 +57,38 @@ const Dashboard = () => {
       if (user) {
         setUserName(user.user_metadata.full_name || "Doctor");
         
-        const { data: cases, error } = await supabase
-          .from('cases')
-          .select('*')
-          .eq('doctor_id', user.id)
-          .order('created_at', { ascending: false });
+        // Fetch profile for role and org_id
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, id')
+          .eq('id', user.id)
+          .single();
+        
+        const userRole = profile?.role || 'doctor';
+        setRole(userRole);
+
+        // For Organizations, fetch pending doctors count
+        if (userRole === 'organization') {
+          const { count } = await supabase
+            .from('profiles')
+            .select('id', { count: 'exact' })
+            .eq('org_id', user.id)
+            .eq('status', 'pending');
+          setPendingCount(count || 0);
+        }
+
+        // Build query based on role
+        let query = supabase.from('cases').select('*');
+        
+        if (userRole === 'organization') {
+          // Organizations see all cases for their clinic
+          query = query.eq('org_id', user.id);
+        } else {
+          // Doctors see only their own cases
+          query = query.eq('doctor_id', user.id);
+        }
+
+        const { data: cases, error } = await query.order('created_at', { ascending: false });
 
         if (!error && cases) {
           setRecentCases(cases.slice(0, 3).map(c => ({
@@ -67,7 +96,8 @@ const Dashboard = () => {
             name: c.patient_name,
             tooth: c.tooth_number,
             dx: c.diagnosis,
-            urgent: c.is_urgent
+            urgent: c.is_urgent,
+            doctor: c.doctor_name, // Include doctor name
           })));
           
           setStats({
@@ -131,6 +161,23 @@ const Dashboard = () => {
 
         {!isGuest && (
           <View style={styles.mainContent}>
+            {/* Approval Alert for Organizations */}
+            {role === "organization" && pendingCount > 0 && (
+              <TouchableOpacity 
+                style={styles.approvalAlert}
+                onPress={() => navigation.navigate("ApprovalCenter")}
+              >
+                <View style={styles.alertIcon}>
+                  <AlertCircle size={20} color="#F59E0B" />
+                </View>
+                <View style={styles.alertBody}>
+                  <Text style={styles.alertTitle}>Pending Doctor Approvals</Text>
+                  <Text style={styles.alertText}>{pendingCount} doctors are waiting for your verification.</Text>
+                </View>
+                <ChevronRight size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+
             {/* Stats */}
             <View style={styles.statsGrid}>
               {[
@@ -192,6 +239,9 @@ const Dashboard = () => {
                         <Text style={styles.caseSubtext}>
                           Tooth {c.tooth} · {c.dx}
                         </Text>
+                        {c.doctor && (
+                          <Text style={styles.doctorName}>By {c.doctor}</Text>
+                        )}
                       </View>
                       {c.urgent ? (
                         <View style={styles.urgentBadge}>
@@ -406,6 +456,13 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 2,
   },
+  doctorName: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#0EA5E9",
+    marginTop: 2,
+    textTransform: "uppercase",
+  },
   urgentBadge: {
     backgroundColor: "#EF4444",
     paddingHorizontal: 8,
@@ -430,6 +487,37 @@ const styles = StyleSheet.create({
     color: "#0EA5E9",
     marginTop: 4,
     fontWeight: "500",
+  },
+  approvalAlert: {
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FEF3C7",
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  alertIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alertBody: {
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#92400E",
+  },
+  alertText: {
+    fontSize: 12,
+    color: "#B45309",
   },
 });
 

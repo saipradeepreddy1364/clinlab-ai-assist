@@ -37,16 +37,24 @@ const NewCase = () => {
         return;
       }
 
-      const { error } = await supabase.from('cases').insert([
-        {
-          patient_name: formData.patient_name,
-          tooth_number: formData.tooth_number,
-          diagnosis: formData.chief_complaint,
-          status: formData.case_type === "lab" ? "lab-sent" : formData.case_type === "checkup" ? "checkup" : "in-progress",
-          is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"),
-          doctor_id: user.id,
-        },
-      ]);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, org_id')
+          .eq('id', user.id)
+          .single();
+
+        const { error } = await supabase.from('cases').insert([
+          {
+            patient_name: formData.patient_name,
+            tooth_number: formData.tooth_number,
+            diagnosis: formData.chief_complaint,
+            status: formData.case_type === "lab" ? "lab-sent" : formData.case_type === "checkup" ? "checkup" : "in-progress",
+            is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"),
+            doctor_id: user.id,
+            doctor_name: profile?.full_name || user.user_metadata.full_name,
+            org_id: profile?.org_id,
+          },
+        ]);
 
       if (error) throw error;
       navigation.navigate("Patients"); // Redirect to Patients list to see the new record
