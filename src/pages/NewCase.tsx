@@ -43,12 +43,6 @@ const NewCase = () => {
           status: 'in-progress',
           is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"),
           doctor_id: user.id,
-          metadata: {
-            age: formData.age,
-            gender: formData.gender,
-            symptoms: symptoms,
-            notes: formData.notes,
-          },
         },
       ]);
 

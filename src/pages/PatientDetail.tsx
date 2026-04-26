@@ -223,7 +223,7 @@ const PatientDetail = () => {
             <View style={styles.profileInfo}>
               <Text style={styles.patientName}>{patient.patient_name}</Text>
               <Text style={styles.patientMeta}>
-                #{id.slice(0, 8)} · {patient.metadata?.gender?.charAt(0).toUpperCase() || 'F'} · {patient.metadata?.age || 'N/A'} · Tooth {patient.tooth_number}
+                #{id.slice(0, 8)} · Tooth {patient.tooth_number}
               </Text>
             </View>
           </View>
