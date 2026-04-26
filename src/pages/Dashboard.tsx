@@ -53,21 +53,36 @@ const Dashboard = () => {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      
       if (user) {
-        setUserName(user.user_metadata.full_name || "Doctor");
+        setUserName(user.user_metadata?.full_name || "Doctor");
         
-        // Fetch profile for role and org_id
-        const { data: profile } = await supabase
+        // 1. Try metadata first (faster and more reliable if profiles table 404s)
+        const metaRole = user.user_metadata?.role;
+        if (metaRole) {
+          console.log("Dashboard: Detected role from metadata:", metaRole);
+          setRole(metaRole);
+        }
+
+        // 2. Fetch profile for status check (ignore 404s for role detection)
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role, id')
           .eq('id', user.id)
           .single();
+
+        if (profileError) {
+          console.error("Dashboard: Error fetching profile:", profileError);
+        }
         
-        const userRole = profile?.role || 'doctor';
+        const userRole = profile?.role || metaRole || 'doctor';
+        console.log("Dashboard: Final detected role:", userRole);
         setRole(userRole);
 
         if (userRole === 'organization') {
+          console.log("Dashboard: Redirecting to OrgDashboard...");
           navigation.navigate("OrgDashboard");
           return;
         }
@@ -93,9 +108,9 @@ const Dashboard = () => {
           query = query.eq('doctor_id', user.id);
         }
 
-        const { data: cases, error } = await query.order('created_at', { ascending: false });
+        const { data: cases, error: casesError } = await query.order('created_at', { ascending: false });
 
-        if (!error && cases) {
+        if (!casesError && cases) {
           setRecentCases(cases.slice(0, 3).map(c => ({
             id: c.id,
             name: c.patient_name,

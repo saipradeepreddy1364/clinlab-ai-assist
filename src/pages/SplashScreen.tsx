@@ -12,7 +12,23 @@ const SplashScreen = () => {
       const guestMode = await AsyncStorage.getItem("guestMode");
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (session || guestMode === "true") {
+      if (session) {
+        // Fetch role
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        const role = profile?.role || session.user.user_metadata?.role || 'doctor';
+        console.log("SplashScreen: Redirection role:", role);
+        
+        if (role === 'organization') {
+          navigation.replace("OrgDashboard");
+        } else {
+          navigation.replace("Dashboard");
+        }
+      } else if (guestMode === "true") {
         navigation.replace("Dashboard");
       } else {
         navigation.replace("Login");
