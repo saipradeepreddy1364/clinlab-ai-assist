@@ -7,12 +7,10 @@ import {
   ShieldCheck,
   Wrench,
   FlaskConical,
-  Mic,
   ArrowRight,
   Loader2,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useVoiceInput } from "@/hooks/useVoice";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
@@ -84,11 +82,6 @@ const AIEngine = () => {
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const onVoiceResult = React.useCallback((text: string) => {
-    setInput(text);
-  }, []);
-
-  const { isListening, startListening, stopListening } = useVoiceInput(onVoiceResult);
 
   useEffect(() => {
     const checkGuest = async () => {
@@ -159,15 +152,6 @@ const AIEngine = () => {
             <View style={styles.mainInputCard}>
               <View style={styles.cardHeader}>
                 <Text style={styles.inputLabel}>Clinical thoughts / condition</Text>
-                <TouchableOpacity 
-                  onPress={isListening ? stopListening : startListening}
-                  style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
-                >
-                  <Mic size={14} color={isListening ? "#EF4444" : "#64748B"} />
-                  <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
-                    {isListening ? "Listening..." : "Voice"}
-                  </Text>
-                </TouchableOpacity>
               </View>
               <TextInput
                 value={input}
@@ -191,15 +175,6 @@ const AIEngine = () => {
           <View style={styles.mainInputCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.inputLabel}>Current Step / Thought</Text>
-              <TouchableOpacity 
-                onPress={isListening ? stopListening : startListening}
-                style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
-              >
-                <Mic size={14} color={isListening ? "#EF4444" : "#64748B"} />
-                <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
-                  {isListening ? "Listening..." : "Voice"}
-                </Text>
-              </TouchableOpacity>
             </View>
             <TextInput
               value={input}

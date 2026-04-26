@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Mic, X, Loader2, ChevronDown } from "lucide-react-native";
+import { X, Loader2, ChevronDown } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
-import { useVoiceInput } from "@/hooks/useVoice";
 import AppLayout from "@/components/AppLayout";
 
 const symptomOptions = ["Pain", "Swelling", "Sensitivity", "Sinus tract", "Mobility", "Bleeding"];
@@ -22,9 +21,6 @@ const NewCase = () => {
     notes: "",
   });
 
-  const { isListening, startListening, stopListening } = useVoiceInput((text) => {
-    setFormData(prev => ({ ...prev, notes: prev.notes + (prev.notes ? " " : "") + text }));
-  });
 
   const toggleSymptom = (s: string) =>
     setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
@@ -57,9 +53,10 @@ const NewCase = () => {
       ]);
 
       if (error) throw error;
-      navigation.navigate("Dashboard");
+      navigation.navigate("Patients"); // Redirect to Patients list to see the new record
     } catch (error: any) {
-      navigation.navigate("Dashboard");
+      console.error(error);
+      alert("Error adding case: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -153,18 +150,7 @@ const NewCase = () => {
           </View>
 
           <View style={styles.card}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.cardTitle}>Clinical notes</Text>
-              <TouchableOpacity 
-                onPress={isListening ? stopListening : startListening}
-                style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
-              >
-                <Mic size={14} color={isListening ? "#EF4444" : "#64748B"} />
-                <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
-                  {isListening ? "Listening..." : "Voice"}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.cardTitle}>Clinical notes</Text>
             <TextInput
               style={styles.textarea}
               placeholder="e.g. Spontaneous throbbing pain, lingering response to cold test on 36. Tender on percussion. No swelling."

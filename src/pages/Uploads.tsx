@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator, Linking, Platform } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2, Calendar, User, ClipboardList, Search, ChevronDown, AlertCircle } from "lucide-react-native";
 import * as DocumentPicker from "expo-document-picker";
@@ -200,11 +200,15 @@ const Uploads = () => {
 
       if (error) throw error;
       if (data?.signedUrl) {
-        // In RN we use Linking.openURL
-        console.log("Opening URL:", data.signedUrl);
+        if (Platform.OS === 'web') {
+          window.open(data.signedUrl, '_blank');
+        } else {
+          Linking.openURL(data.signedUrl);
+        }
       }
     } catch (error: any) {
       console.error(error);
+      alert("Error opening file: " + error.message);
     }
   };
 
@@ -366,7 +370,9 @@ const Uploads = () => {
                           <View style={styles.progressBarBg}>
                             <View style={[styles.progressBarFill, { width: `${f.progress}%` }]} />
                           </View>
-                          <Text style={styles.fileMeta}>{f.appointmentDate || f.size}</Text>
+                          <Text style={styles.fileMeta}>
+                            {f.progress === 100 ? f.size : `${((parseFloat(f.size) || 0) * f.progress / 100).toFixed(1)} / ${f.size}`}
+                          </Text>
                         </View>
                       </View>
                       <TouchableOpacity 
@@ -678,10 +684,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#0EA5E9",
   },
   fileMeta: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#94A3B8",
-    width: 80,
+    width: 100,
     textAlign: "right",
+    fontWeight: "500",
   },
   deleteButton: {
     padding: 8,

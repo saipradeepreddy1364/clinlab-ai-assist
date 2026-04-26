@@ -10,7 +10,10 @@ import {
   CheckCircle2,
   Circle,
   Calendar,
+  Loader2,
+  AlertCircle
 } from "lucide-react-native";
+import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
 const timeline = [
@@ -25,6 +28,75 @@ const PatientDetail = () => {
   const route = useRoute<any>();
   const id = route.params?.id;
   const [activeTab, setActiveTab] = useState("timeline");
+  const [patient, setPatient] = useState<any>(null);
+  const [files, setFiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      if (!id) return;
+      
+      const { data: caseData } = await supabase
+        .from('cases')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (caseData) {
+        setPatient(caseData);
+        
+        // Fetch files for this patient
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: storageFiles } = await supabase.storage
+            .from('clinical-files')
+            .list(user.id);
+          
+          if (storageFiles) {
+            const matchedFiles = storageFiles.filter(f => {
+              const parts = f.name.split('--');
+              if (parts.length > 1) {
+                const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
+                return pName?.toLowerCase() === caseData.patient_name.toLowerCase();
+              }
+              return false;
+            }).map(f => ({
+              name: f.name.split('--').slice(1).join('--') || f.name,
+              tag: f.name.split('--')[0]?.split('_')[1]?.replace(/-/g, ' ') || "Other",
+              path: `${user.id}/${f.name}`,
+              type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : "pdf"
+            }));
+            setFiles(matchedFiles);
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <View style={styles.loadingContainer}>
+          <Loader2 size={24} color="#0EA5E9" />
+          <Text style={styles.loadingText}>Loading patient record...</Text>
+        </View>
+      </AppLayout>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <AppLayout>
+        <View style={styles.errorContainer}>
+          <AlertCircle size={48} color="#EF4444" />
+          <Text style={styles.errorText}>Patient record not found.</Text>
+        </View>
+      </AppLayout>
+    );
+  }
 
   const renderTimeline = () => (
     <View style={styles.card}>
@@ -103,27 +175,39 @@ const PatientDetail = () => {
         <Text style={styles.cardHeaderTitle}>Lab forms & uploads</Text>
       </View>
       <View style={styles.fileList}>
-        {[
-          { name: "Pre-op IOPA.jpg", tag: "X-ray", icon: ImageIcon },
-          { name: "Crown Lab Req.pdf", tag: "Lab Report", icon: FileText },
-          { name: "Master Cone IOPA.jpg", tag: "X-ray", icon: ImageIcon },
-          { name: "Prescription.pdf", tag: "Prescription", icon: FileText },
-        ].map((f) => (
-          <View key={f.name} style={styles.fileItem}>
-            <View style={styles.fileIconBox}>
-              <f.icon size={18} color="#0EA5E9" />
-            </View>
-            <View style={styles.fileInfo}>
-              <Text style={styles.fileName}>{f.name}</Text>
-              <View style={styles.fileTag}>
-                <Text style={styles.fileTagText}>{f.tag}</Text>
+        {files.length > 0 ? (
+          files.map((f) => (
+            <View key={f.name} style={styles.fileItem}>
+              <View style={styles.fileIconBox}>
+                {f.type === "img" ? <ImageIcon size={18} color="#0EA5E9" /> : <FileText size={18} color="#0EA5E9" />}
               </View>
+              <View style={styles.fileInfo}>
+                <Text style={styles.fileName} numberOfLines={1}>{f.name}</Text>
+                <View style={styles.fileTag}>
+                  <Text style={styles.fileTagText}>{f.tag}</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.downloadButton}
+                onPress={async () => {
+                  const { data } = await supabase.storage
+                    .from('clinical-files')
+                    .createSignedUrl(f.path, 3600);
+                  if (data?.signedUrl) {
+                    import("react-native").then(({ Linking, Platform }) => {
+                      if (Platform.OS === 'web') window.open(data.signedUrl, '_blank');
+                      else Linking.openURL(data.signedUrl);
+                    });
+                  }
+                }}
+              >
+                <Download size={18} color="#64748B" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.downloadButton}>
-              <Download size={18} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={styles.emptyFilesText}>No files uploaded for this patient yet.</Text>
+        )}
       </View>
     </View>
   );
@@ -137,14 +221,14 @@ const PatientDetail = () => {
               <Text style={styles.avatarText}>P</Text>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.patientName}>Priya Sharma</Text>
+              <Text style={styles.patientName}>{patient.patient_name}</Text>
               <Text style={styles.patientMeta}>
-                #{id || "C-2041"} · F · 32 · Tooth 36
+                #{id.slice(0, 8)} · {patient.metadata?.gender?.charAt(0).toUpperCase() || 'F'} · {patient.metadata?.age || 'N/A'} · Tooth {patient.tooth_number}
               </Text>
             </View>
           </View>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>In progress</Text>
+            <Text style={styles.statusBadgeText}>{patient.status.replace('-', ' ')}</Text>
           </View>
         </View>
 
@@ -419,6 +503,36 @@ const styles = StyleSheet.create({
   },
   downloadButton: {
     padding: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    gap: 12,
+  },
+  loadingText: {
+    color: "#64748B",
+    fontSize: 14,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    gap: 16,
+  },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptyFilesText: {
+    fontSize: 12,
+    color: "#94A3B8",
+    textAlign: "center",
+    padding: 20,
+    fontStyle: "italic",
   }
 });
 
