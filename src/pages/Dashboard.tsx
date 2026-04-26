@@ -10,6 +10,8 @@ import {
   AlertCircle,
   ChevronRight,
   Upload,
+  Check,
+  Stethoscope,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
@@ -28,8 +30,8 @@ const Dashboard = () => {
   const [greeting, setGreeting] = useState("Good morning");
   const [stats, setStats] = useState({
     active: 0,
-    labPending: 0,
-    urgent: 0,
+    lab: 0,
+    checkup: 0,
   });
   const [recentCases, setRecentCases] = useState<any[]>([]);
   const [isGuest, setIsGuest] = useState(false);
@@ -43,7 +45,7 @@ const Dashboard = () => {
 
       if (guest) {
         setUserName("Guest");
-        setStats({ active: 0, labPending: 0, urgent: 0 });
+        setStats({ active: 0, lab: 0, checkup: 0 });
         setRecentCases([]);
         setLoading(false);
         return;
@@ -70,8 +72,8 @@ const Dashboard = () => {
           
           setStats({
             active: cases.filter(c => c.status === 'in-progress').length,
-            labPending: cases.filter(c => c.status === 'lab-sent').length,
-            urgent: cases.filter(c => c.is_urgent).length,
+            lab: cases.filter(c => c.status === 'lab-sent').length,
+            checkup: cases.filter(c => c.status === 'checkup').length,
           });
         }
       }
@@ -101,7 +103,7 @@ const Dashboard = () => {
             </Text>
             {!isGuest && (
               <Text style={styles.statsSummary}>
-                {stats.active} active cases · {stats.labPending} lab requests pending
+                {stats.active} active cases · {stats.lab} lab requests pending
               </Text>
             )}
             <View style={styles.heroActions}>
@@ -133,8 +135,8 @@ const Dashboard = () => {
             <View style={styles.statsGrid}>
               {[
                 { label: "Active", value: stats.active, color: "#0EA5E9", icon: Activity },
-                { label: "Lab", value: stats.labPending, color: "#8B5CF6", icon: ClipboardList },
-                { label: "Urgent", value: stats.urgent, color: "#EF4444", icon: AlertCircle },
+                { label: "Lab", value: stats.lab, color: "#8B5CF6", icon: ClipboardList },
+                { label: "Checkup", value: stats.checkup, color: "#10B981", icon: Stethoscope },
               ].map((s) => (
                 <View key={s.label} style={styles.statCard}>
                   <s.icon size={16} color={s.color} />

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { X, Loader2, ChevronDown } from "lucide-react-native";
+import { X, Loader2, ChevronDown, Check, Stethoscope } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
@@ -19,7 +19,9 @@ const NewCase = () => {
     tooth_number: "",
     chief_complaint: "",
     notes: "",
+    case_type: "active",
   });
+  const [caseTypeModalVisible, setCaseTypeModalVisible] = useState(false);
 
 
   const toggleSymptom = (s: string) =>
@@ -40,7 +42,7 @@ const NewCase = () => {
           patient_name: formData.patient_name,
           tooth_number: formData.tooth_number,
           diagnosis: formData.chief_complaint,
-          status: 'in-progress',
+          status: formData.case_type === "lab" ? "lab-sent" : formData.case_type === "checkup" ? "checkup" : "in-progress",
           is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"),
           doctor_id: user.id,
         },
@@ -58,7 +60,7 @@ const NewCase = () => {
 
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         <Text style={styles.description}>Capture clinical findings for the patient.</Text>
 
         <View style={styles.form}>
@@ -99,6 +101,21 @@ const NewCase = () => {
                   <ChevronDown size={16} color="#64748B" />
                 </TouchableOpacity>
               </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                <Stethoscope size={12} color="#64748B" /> Case Type
+              </Text>
+              <TouchableOpacity 
+                style={styles.selectTrigger}
+                onPress={() => setCaseTypeModalVisible(true)}
+              >
+                <Text style={styles.selectValue}>
+                  {formData.case_type.charAt(0).toUpperCase() + formData.case_type.slice(1)}
+                </Text>
+                <ChevronDown size={16} color="#64748B" />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
@@ -165,7 +182,7 @@ const NewCase = () => {
               disabled={loading}
             >
               {loading ? (
-                <Loader2 size={18} color="#FFFFFF" />
+                <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <View style={styles.buttonInner}>
                   <Text style={styles.submitButtonText}>Add Case</Text>
@@ -174,13 +191,46 @@ const NewCase = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </ScrollView>
+
+      {/* Case Type Modal */}
+      <Modal
+        visible={caseTypeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCaseTypeModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setCaseTypeModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Case Type</Text>
+            {["active", "lab", "checkup"].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={styles.modalOption}
+                onPress={() => {
+                  setFormData({ ...formData, case_type: type });
+                  setCaseTypeModalVisible(false);
+                }}
+              >
+                <Text style={[styles.modalOptionText, formData.case_type === type && styles.modalOptionTextActive]}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+                {formData.case_type === type && <Check size={16} color="#0EA5E9" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Gender Picker Modal */}
       <Modal
         visible={genderModalVisible}
-        transparent={true}
-        animationType="slide"
+        transparent
+        animationType="fade"
         onRequestClose={() => setGenderModalVisible(false)}
       >
         <TouchableOpacity 
@@ -189,16 +239,20 @@ const NewCase = () => {
           onPress={() => setGenderModalVisible(false)}
         >
           <View style={styles.modalContent}>
-            {["female", "male", "other"].map((v) => (
+            <Text style={styles.modalTitle}>Select Gender</Text>
+            {["male", "female", "other"].map((g) => (
               <TouchableOpacity
-                key={v}
+                key={g}
                 style={styles.modalOption}
                 onPress={() => {
-                  setFormData({ ...formData, gender: v });
+                  setFormData({ ...formData, gender: g });
                   setGenderModalVisible(false);
                 }}
               >
-                <Text style={styles.modalOptionText}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
+                <Text style={[styles.modalOptionText, formData.gender === g && styles.modalOptionTextActive]}>
+                  {g.charAt(0).toUpperCase() + g.slice(1)}
+                </Text>
+                {formData.gender === g && <Check size={16} color="#0EA5E9" />}
               </TouchableOpacity>
             ))}
           </View>
@@ -303,33 +357,6 @@ const styles = StyleSheet.create({
   symptomTextActive: {
     color: "#FFFFFF",
   },
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  voiceButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 32,
-  },
-  voiceButtonActive: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderColor: "#EF4444",
-  },
-  voiceButtonText: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  voiceButtonTextActive: {
-    color: "#EF4444",
-  },
   textarea: {
     fontSize: 14,
     color: "#0F172A",
@@ -399,6 +426,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#0F172A",
     fontWeight: "500",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 8,
+  },
+  modalOptionTextActive: {
+    color: "#0EA5E9",
+    fontWeight: "700",
   },
 });
 
