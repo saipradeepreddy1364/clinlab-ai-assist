@@ -1,37 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Dimensions, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Stethoscope, Loader2 } from "lucide-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Stethoscope, Loader2, ArrowLeft, ShieldCheck } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
-const Login = () => {
+const DoctorLogin = () => {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile?.role === 'organization') {
-          navigation.navigate("OrgDashboard");
-        } else {
-          navigation.navigate("Dashboard");
-        }
-      }
-    });
-  }, [navigation]);
-
   const handleLogin = async () => {
-    setLoading(true);
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields.");
+      return;
+    }
 
+    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -39,19 +24,21 @@ const Login = () => {
       });
 
       if (error) throw error;
-      
+
       if (data.user) {
+        // Check if role is doctor
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
           .single();
-        
-        if (profile?.role === 'organization') {
-          navigation.navigate("OrgDashboard");
-        } else {
-          navigation.navigate("Dashboard");
+
+        if (profile?.role !== 'doctor') {
+          await supabase.auth.signOut();
+          throw new Error("This login is for Doctors only. Organizations should use the main portal.");
         }
+
+        navigation.navigate("Dashboard");
       }
     } catch (error: any) {
       Alert.alert("Login Failed", error.message);
@@ -60,37 +47,36 @@ const Login = () => {
     }
   };
 
-  const continueAsGuest = async () => {
-    await AsyncStorage.getItem("guestMode");
-    await AsyncStorage.setItem("guestMode", "true");
-    navigation.navigate("Dashboard");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate("Login")}>
+          <ArrowLeft size={20} color="#64748B" />
+          <Text style={styles.backText}>Organization Portal</Text>
+        </TouchableOpacity>
+
         <View style={styles.formContainer}>
           <View style={styles.logoRow}>
             <View style={styles.logoBox}>
               <Stethoscope size={24} color="#FFFFFF" />
             </View>
-            <Text style={styles.logoText}>ClinLab</Text>
+            <Text style={styles.logoText}>ClinLab <Text style={styles.proText}>Pro</Text></Text>
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Organization Portal</Text>
-            <Text style={styles.subtitle}>Sign in to manage your clinic and view reports.</Text>
+            <Text style={styles.title}>Clinical Access</Text>
+            <Text style={styles.subtitle}>Secure login for registered medical practitioners.</Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Org Email</Text>
+              <Text style={styles.label}>Professional Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="admin@cityclinic.com"
+                placeholder="dr.name@clinic.com"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -103,7 +89,7 @@ const Login = () => {
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Password</Text>
                 <TouchableOpacity>
-                  <Text style={styles.forgotText}>Forgot?</Text>
+                  <Text style={styles.forgotText}>Reset PIN?</Text>
                 </TouchableOpacity>
               </View>
               <TextInput
@@ -116,31 +102,28 @@ const Login = () => {
               />
             </View>
 
+            <View style={styles.securityNote}>
+              <ShieldCheck size={14} color="#10B981" />
+              <Text style={styles.securityText}>End-to-end encrypted clinical connection</Text>
+            </View>
+
             <TouchableOpacity 
               style={[styles.primaryButton, loading && styles.buttonDisabled]} 
               onPress={handleLogin}
               disabled={loading}
             >
               {loading ? (
-                <Loader2 size={18} color="#FFFFFF" />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Sign in as Org</Text>
+                <Text style={styles.buttonText}>Enter Clinic</Text>
               )}
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.doctorLoginButton} 
-              onPress={() => navigation.navigate("DoctorLogin")}
-            >
-              <Stethoscope size={18} color="#0EA5E9" />
-              <Text style={styles.doctorLoginButtonText}>I am a Doctor</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>New here? </Text>
+            <Text style={styles.footerText}>Not registered by your Org? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-              <Text style={styles.linkText}>Create an account</Text>
+              <Text style={styles.linkText}>Apply for Access</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -152,10 +135,21 @@ const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
   },
   keyboardView: {
     flex: 1,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+    gap: 8,
+  },
+  backText: {
+    fontSize: 14,
+    color: "#64748B",
+    fontWeight: "500",
   },
   formContainer: {
     flex: 1,
@@ -172,27 +166,32 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#0EA5E9",
+    backgroundColor: "#0F172A",
     alignItems: "center",
     justifyContent: "center",
   },
   logoText: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#0F172A",
+  },
+  proText: {
+    color: "#0EA5E9",
   },
   header: {
     marginBottom: 32,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
+    fontSize: 32,
+    fontWeight: "800",
     color: "#0F172A",
+    letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#64748B",
     marginTop: 8,
+    lineHeight: 22,
   },
   form: {
     gap: 20,
@@ -206,32 +205,52 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   input: {
-    height: 48,
+    height: 54,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    fontSize: 14,
+    fontSize: 16,
     color: "#0F172A",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
   },
   forgotText: {
     fontSize: 12,
     color: "#0EA5E9",
-    fontWeight: "500",
+    fontWeight: "600",
+  },
+  securityNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F0FDF4",
+    padding: 10,
+    borderRadius: 12,
+  },
+  securityText: {
+    fontSize: 11,
+    color: "#166534",
+    fontWeight: "600",
   },
   primaryButton: {
-    height: 48,
+    height: 56,
     backgroundColor: "#0EA5E9",
-    borderRadius: 16,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -239,40 +258,12 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    color: "#0F172A",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  doctorLoginButton: {
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-  },
-  doctorLoginButtonText: {
-    color: "#0EA5E9",
-    fontSize: 14,
     fontWeight: "700",
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 32,
+    marginTop: 40,
   },
   footerText: {
     fontSize: 14,
@@ -281,11 +272,8 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 14,
     color: "#0EA5E9",
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  spin: {
-    // animated spin logic in RN
-  }
 });
 
-export default Login;
+export default DoctorLogin;

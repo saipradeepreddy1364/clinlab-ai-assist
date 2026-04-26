@@ -9,8 +9,12 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthWrapper } from "@/components/AuthWrapper";
 import SplashScreen from "./pages/SplashScreen";
 import Login from "./pages/Login";
+import DoctorLogin from "./pages/DoctorLogin";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import OrgDashboard from "./pages/OrgDashboard";
+import OrgCases from "./pages/OrgCases";
+import OrgReports from "./pages/OrgReports";
 import NewCase from "./pages/NewCase";
 import AIEngine from "./pages/AIEngine";
 import LabRequisition from "./pages/LabRequisition";
@@ -46,10 +50,14 @@ const App = () => {
                 
                 {/* Public Routes */}
                 <Stack.Screen name="Login" component={Login} />
+                <Stack.Screen name="DoctorLogin" component={DoctorLogin} />
                 <Stack.Screen name="Signup" component={Signup} />
                 
                 {/* Authenticated Routes */}
                 <Stack.Screen name="Dashboard" component={Dashboard} />
+                <Stack.Screen name="OrgDashboard" component={OrgDashboard} />
+                <Stack.Screen name="OrgCases" component={OrgCases} />
+                <Stack.Screen name="OrgReports" component={OrgReports} />
                 <Stack.Screen name="NewCase" component={NewCase} />
                 <Stack.Screen name="AIEngine" component={AIEngine} />
                 <Stack.Screen name="LabRequisition" component={LabRequisition} />

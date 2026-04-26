@@ -12,6 +12,7 @@ const Patients = () => {
   const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [role, setRole] = useState<string>("doctor");
 
   useEffect(() => {
     const fetchCases = async () => {
@@ -25,32 +26,66 @@ const Patients = () => {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data, error } = await supabase
-          .from('cases')
-          .select('*')
-          .eq('doctor_id', user.id)
-          .order('created_at', { ascending: false });
+        // Fetch role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        const userRole = profile?.role || 'doctor';
+        setRole(userRole);
+
+        let query = supabase.from('cases').select('*');
+        
+        if (userRole === 'organization') {
+          query = query.eq('org_id', user.id);
+        } else {
+          query = query.eq('doctor_id', user.id);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (!error && data) {
           setCases(data);
         }
 
-        const { data: files } = await supabase.storage
-          .from('clinical-files')
-          .list(user.id);
-        
-        if (files) {
-          const counts: Record<string, number> = {};
-          files.forEach(f => {
-            const parts = f.name.split('--');
-            if (parts.length > 1) {
-              const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
-              if (pName) {
-                counts[pName] = (counts[pName] || 0) + 1;
+        // For files, we need to handle listing based on doctors in the org if organization
+        if (userRole === 'organization') {
+          const { data: doctors } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('org_id', user.id);
+          
+          if (doctors) {
+            const counts: Record<string, number> = {};
+            for (const dr of doctors) {
+              const { data: files } = await supabase.storage.from('clinical-files').list(dr.id);
+              if (files) {
+                files.forEach(f => {
+                  const parts = f.name.split('--');
+                  if (parts.length > 1) {
+                    const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
+                    if (pName) counts[pName] = (counts[pName] || 0) + 1;
+                  }
+                });
               }
             }
-          });
-          setFileCounts(counts);
+            setFileCounts(counts);
+          }
+        } else {
+          const { data: files } = await supabase.storage.from('clinical-files').list(user.id);
+          if (files) {
+            const counts: Record<string, number> = {};
+            files.forEach(f => {
+              const parts = f.name.split('--');
+              if (parts.length > 1) {
+                const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
+                if (pName) counts[pName] = (counts[pName] || 0) + 1;
+              }
+            });
+            setFileCounts(counts);
+          }
         }
       }
       setLoading(false);
@@ -69,13 +104,15 @@ const Patients = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.countText}>{filteredCases.length} cases</Text>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate("NewCase")}
-            style={styles.addButton}
-          >
-            <Plus size={14} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>New</Text>
-          </TouchableOpacity>
+          {role !== "organization" && (
+            <TouchableOpacity 
+              onPress={() => navigation.navigate("NewCase")}
+              style={styles.addButton}
+            >
+              <Plus size={14} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>New</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.searchContainer}>

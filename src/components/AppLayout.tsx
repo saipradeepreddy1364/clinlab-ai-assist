@@ -14,6 +14,8 @@ import {
   Bell,
   ChevronLeft,
   LogOut,
+  LayoutGrid,
+  FileSearch,
 } from "lucide-react-native"; // Using native version
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "./ThemeProvider";
@@ -24,7 +26,7 @@ import { NotificationSidebar } from "./NotificationSidebar";
 
 const { width } = Dimensions.get("window");
 
-const tabs = [
+const doctorTabs = [
   { name: "Dashboard", label: "Home", icon: LayoutDashboard },
   { name: "NewCase", label: "New", icon: FilePlus2 },
   { name: "AIEngine", label: "AI", icon: Sparkles, primary: true },
@@ -32,12 +34,23 @@ const tabs = [
   { name: "Uploads", label: "Files", icon: Upload },
 ];
 
+const orgTabs = [
+  { name: "OrgDashboard", label: "Overview", icon: LayoutGrid },
+  { name: "OrgCases", label: "Cases", icon: ClipboardList },
+  { name: "AIEngine", label: "AI", icon: Sparkles, primary: true },
+  { name: "Patients", label: "Records", icon: Users },
+  { name: "OrgReports", label: "Reports", icon: FileSearch },
+];
+
 const titleMap: Record<string, string> = {
   "Dashboard": "Clinical Assistant",
+  "OrgDashboard": "Organization Hub",
   "NewCase": "New Case",
   "AIEngine": "AI Clinical Guide",
   "LabRequisition": "Lab Requisition",
   "Patients": "Patient Records",
+  "OrgCases": "Organization Cases",
+  "OrgReports": "Patient Reports",
   "Uploads": "File Uploads",
 };
 
@@ -47,6 +60,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const route = useRoute();
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [role, setRole] = useState<"doctor" | "organization" | "guest">("doctor");
   
   useNotifications();
 
@@ -54,14 +68,33 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     const checkUser = async () => {
       const guestValue = await AsyncStorage.getItem("guestMode");
       const isGuest = guestValue === "true";
-      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session && !isGuest) {
+      if (isGuest) {
+        setRole("guest");
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         navigation.navigate("Login");
+        return;
+      }
+
+      // Fetch profile for role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profile) {
+        setRole(profile.role);
       }
     };
     checkUser();
   }, [navigation]);
+
+  const activeTabs = role === "organization" ? orgTabs : doctorTabs;
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("guestMode");
@@ -117,7 +150,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Bottom tab bar */}
       <View style={[styles.tabBar, isDark && styles.tabBarDark]}>
-        {tabs.map((tab) => {
+        {activeTabs.map((tab) => {
           const isActive = route.name === tab.name;
           if (tab.primary) {
             return (

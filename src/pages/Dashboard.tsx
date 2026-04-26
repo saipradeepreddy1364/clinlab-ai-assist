@@ -67,6 +67,11 @@ const Dashboard = () => {
         const userRole = profile?.role || 'doctor';
         setRole(userRole);
 
+        if (userRole === 'organization') {
+          navigation.navigate("OrgDashboard");
+          return;
+        }
+
         // For Organizations, fetch pending doctors count
         if (userRole === 'organization') {
           const { count } = await supabase
