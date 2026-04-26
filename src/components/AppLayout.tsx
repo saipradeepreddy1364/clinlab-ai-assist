@@ -153,8 +153,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    height: Platform.OS === 'web' ? '100vh' as any : '100%',
     backgroundColor: "#F8FAFC",
+    ...(Platform.OS === 'web' ? { height: '100vh' as any, overflow: 'hidden' as any } : { height: '100%' as any }),
   },
   containerDark: {
     backgroundColor: "#0F172A",
@@ -221,6 +221,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : {}),
   },
   contentInner: {
     paddingBottom: 100,
