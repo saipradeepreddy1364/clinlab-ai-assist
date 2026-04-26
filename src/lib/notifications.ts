@@ -1,6 +1,22 @@
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+
+// Mock Device for web
+const Device = Platform.OS === 'web'
+  ? { isDevice: false }
+  : require('expo-device');
+
+// Mock Notifications for web to prevent LegacyEventEmitter errors
+const Notifications = Platform.OS === 'web' 
+  ? {
+      setNotificationHandler: () => {},
+      getPermissionsAsync: async () => ({ status: 'undetermined' }),
+      requestPermissionsAsync: async () => ({ status: 'undetermined' }),
+      getExpoPushTokenAsync: async () => ({ data: '' }),
+      setNotificationChannelAsync: async () => {},
+      scheduleNotificationAsync: async () => '',
+      AndroidImportance: { MAX: 4 },
+    }
+  : require('expo-notifications');
 
 // Configure how notifications are handled when the app is foregrounded
 Notifications.setNotificationHandler({
