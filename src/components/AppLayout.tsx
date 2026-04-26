@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Platform } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   LayoutDashboard,
@@ -78,17 +78,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {/* App header */}
       <View style={[styles.header, isDark && styles.headerDark]}>
         <View style={styles.headerLeft}>
-          {!isHome ? (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-              <ChevronLeft size={20} color={isDark ? "#FFFFFF" : "#0F172A"} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.logoContainer}>
-              <Stethoscope size={18} color="#FFFFFF" />
-            </View>
-          )}
+          <View style={styles.logoContainer}>
+            <Stethoscope size={18} color="#FFFFFF" />
+          </View>
           <View>
-            {isHome && <Text style={styles.brandText}>ClinLab</Text>}
+            <Text style={styles.brandText}>ClinLab</Text>
             <Text style={[styles.headerTitle, isDark && styles.textWhite]}>{title}</Text>
           </View>
         </View>
@@ -159,6 +153,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    height: Platform.OS === 'web' ? '100vh' as any : '100%',
     backgroundColor: "#F8FAFC",
   },
   containerDark: {

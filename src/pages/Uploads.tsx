@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2, Calendar, User, ClipboardList, Search, ChevronDown } from "lucide-react-native";
+import { Upload, FileText, Image as ImageIcon, FileArchive, X, CheckCircle2, Loader2, Calendar, User, ClipboardList, Search, ChevronDown, AlertCircle } from "lucide-react-native";
+import * as DocumentPicker from "expo-document-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
@@ -107,14 +108,86 @@ const Uploads = () => {
   }, []);
 
   const handleFileUpload = async () => {
-    // In a real Expo app, we'd use DocumentPicker.getDocumentAsync()
-    // For this conversion, I'll keep the structure ready for it.
-    if (!metadata.patientName.trim()) {
-      return;
-    }
+    if (!metadata.patientName.trim()) return;
     
-    // Placeholder for actual picker logic
-    console.log("Picking files...");
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      setUploading(true);
+      const file = result.assets[0];
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Fetch the file as a blob
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      const fileExt = file.name.split('.').pop();
+      const sanitizedPatient = metadata.patientName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+      const sanitizedCase = metadata.caseType.replace(/\s+/g, '-');
+      const sanitizedDate = metadata.appointmentDate.replace(/\s+/g, '-');
+      
+      const fileName = `${sanitizedPatient}_${sanitizedCase}_${sanitizedDate}--${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('clinical-files')
+        .upload(filePath, blob, {
+          contentType: file.mimeType || 'application/octet-stream',
+          upsert: true
+        });
+
+      if (uploadError) {
+        if (uploadError.message.includes('403') || (uploadError as any).status === 403) {
+          throw new Error("Access Denied (403): Please ensure 'clinical-files' bucket exists and has public/authenticated 'Insert' policies enabled for your user.");
+        }
+        throw uploadError;
+      }
+
+      // Refresh list
+      const { data, error: listError } = await supabase.storage
+        .from('clinical-files')
+        .list(user.id);
+
+      if (!listError && data) {
+        setFiles(data.map(f => {
+          const parts = f.name.split('--');
+          let pName = "", cType = "", aDate = "", actualName = f.name;
+          
+          if (parts.length > 1) {
+            const metaParts = parts[0].split('_');
+            pName = metaParts[0]?.replace(/-/g, ' ');
+            cType = metaParts[1]?.replace(/-/g, ' ');
+            aDate = metaParts[2]?.replace(/-/g, ' ');
+            actualName = parts.slice(1).join('--');
+          }
+
+          return {
+            id: f.id,
+            name: actualName,
+            size: `${(f.metadata.size / 1024 / 1024).toFixed(1)} MB`,
+            tag: "Other",
+            progress: 100,
+            type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : f.name.match(/\.pdf$/i) ? "pdf" : "doc",
+            path: `${user.id}/${f.name}`,
+            patientName: pName,
+            caseType: cType,
+            appointmentDate: aDate
+          };
+        }));
+      }
+    } catch (error: any) {
+      console.error("Upload failed:", error.message);
+      alert(error.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleFileClick = async (file: FileItem) => {

@@ -46,7 +46,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
 
       // Subscribe to realtime changes while open
       const channel = supabase
-        .channel('sidebar-realtime')
+        .channel('sidebar-realtime-' + Date.now())
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'cases' },
@@ -103,10 +103,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
           ))
         ) : (
           <View style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
-              <Sparkles size={32} color="#0EA5E9" />
-            </View>
-            <Text style={styles.emptyTitle}>Welcome to ClinLab AI</Text>
+            <Text style={styles.emptyTitle}>Welcome to ClinLab</Text>
             <Text style={styles.emptyText}>
               Your realtime notification center is now active. You'll see clinical updates and case alerts here.
             </Text>
