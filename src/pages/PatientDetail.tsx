@@ -45,12 +45,11 @@ const PatientDetail = () => {
       if (caseData) {
         setPatient(caseData);
         
-        // Fetch files for this patient
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        // Fetch files for this patient using the case's doctor_id
+        if (caseData.doctor_id) {
           const { data: storageFiles } = await supabase.storage
             .from('clinical-files')
-            .list(user.id);
+            .list(caseData.doctor_id);
           
           if (storageFiles) {
             const matchedFiles = storageFiles.filter(f => {
@@ -63,7 +62,7 @@ const PatientDetail = () => {
             }).map(f => ({
               name: f.name.split('--').slice(1).join('--') || f.name,
               tag: f.name.split('--')[0]?.split('_')[1]?.replace(/-/g, ' ') || "Other",
-              path: `${user.id}/${f.name}`,
+              path: `${caseData.doctor_id}/${f.name}`,
               type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : "pdf"
             }));
             setFiles(matchedFiles);

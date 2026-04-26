@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimens
 import { Download, Printer, Send, ClipboardList } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
+import { useNavigation } from "@react-navigation/native";
 
 const labOptions = [
   { id: "crown", label: "Crown" },
@@ -14,6 +15,7 @@ const labOptions = [
 ];
 
 const LabRequisition = () => {
+  const navigation = useNavigation<any>();
   const [selected, setSelected] = useState<string[]>(["crown"]);
   const [dentistName, setDentistName] = useState("Doctor");
   
@@ -23,12 +25,25 @@ const LabRequisition = () => {
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.user_metadata?.full_name) {
-        setDentistName(user.user_metadata.full_name);
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.role === 'organization') {
+          navigation.navigate("OrgDashboard");
+          return;
+        }
+
+        if (user.user_metadata?.full_name) {
+          setDentistName(user.user_metadata.full_name);
+        }
       }
     };
     fetchUser();
-  }, []);
+  }, [navigation]);
 
   return (
     <AppLayout>

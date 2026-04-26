@@ -142,7 +142,7 @@ const Dashboard = () => {
               </Text>
             )}
             <View style={styles.heroActions}>
-              {!isGuest && (
+              {!isGuest && role !== 'organization' && (
                 <TouchableOpacity 
                   onPress={() => navigation.navigate("NewCase")}
                   style={styles.heroButton}
@@ -202,7 +202,7 @@ const Dashboard = () => {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Quick actions</Text>
               <View style={styles.actionsGrid}>
-                {actions.map((a) => (
+                {actions.filter(a => role !== 'organization' || (a.to !== 'NewCase' && a.to !== 'LabRequisition')).map((a) => (
                   <TouchableOpacity 
                     key={a.title} 
                     onPress={() => navigation.navigate(a.to)}
