@@ -22,7 +22,7 @@ export const useNotifications = () => {
       if (!user) return;
 
       const channel = supabase
-        .channel('schema-db-changes')
+        .channel('doctor-case-notifications')
         .on(
           'postgres_changes',
           {

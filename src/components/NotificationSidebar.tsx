@@ -21,18 +21,17 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch recent cases to simulate notifications
       const { data: cases } = await supabase
         .from('cases')
         .select('*')
         .eq('doctor_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (cases) {
         const mapped: Notification[] = cases.map(c => ({
           id: c.id,
-          title: c.is_urgent ? "Urgent Case Alert" : "New Case Assigned",
+          title: c.is_urgent ? "🚨 Urgent Case" : "New Case Assigned",
           message: `${c.patient_name}: Tooth ${c.tooth_number} - ${c.diagnosis}`,
           type: c.is_urgent ? "urgent" : "info",
           time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -44,6 +43,22 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
 
     if (open) {
       fetchRecentChanges();
+
+      // Subscribe to realtime changes while open
+      const channel = supabase
+        .channel('sidebar-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'cases' },
+          () => {
+            fetchRecentChanges();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [open]);
 
@@ -70,7 +85,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
         </TouchableOpacity>
       </SheetHeader>
 
-      <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.list} showsVerticalScrollIndicator={false} contentContainerStyle={notifications.length === 0 && { flex: 1 }}>
         {notifications.length > 0 ? (
           notifications.map((n) => (
             <View key={n.id} style={[styles.notificationItem, !n.read && styles.unreadItem]}>
@@ -86,7 +101,17 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
               </View>
             </View>
           ))
-        ) : null}
+        ) : (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconContainer}>
+              <Sparkles size={32} color="#0EA5E9" />
+            </View>
+            <Text style={styles.emptyTitle}>Welcome to ClinLab AI</Text>
+            <Text style={styles.emptyText}>
+              Your realtime notification center is now active. You'll see clinical updates and case alerts here.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SheetContent>
   );

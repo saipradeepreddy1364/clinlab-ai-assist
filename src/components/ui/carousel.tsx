@@ -16,6 +16,7 @@ type CarouselContextProps = {
   scrollNext: () => void;
   canScrollPrev: boolean;
   canScrollNext: boolean;
+  setContentSize: (size: number) => void;
 };
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null);
@@ -60,6 +61,7 @@ const Carousel = ({ orientation = "horizontal", children, style }: CarouselProps
       scrollNext,
       canScrollPrev: currentIndex > 0,
       canScrollNext: (currentIndex + 1) * layoutSize < contentSize,
+      setContentSize,
     }}>
       <View 
         style={[styles.container, style]}
@@ -72,7 +74,7 @@ const Carousel = ({ orientation = "horizontal", children, style }: CarouselProps
 };
 
 const CarouselContent = ({ children, style }: { children: React.ReactNode, style?: ViewStyle }) => {
-  const { scrollRef, orientation } = useCarousel();
+  const { scrollRef, orientation, setContentSize } = useCarousel();
   return (
     <ScrollView
       ref={scrollRef}

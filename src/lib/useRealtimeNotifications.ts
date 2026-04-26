@@ -9,7 +9,7 @@ export const useRealtimeNotifications = () => {
 
     // 2. Subscribe to Supabase Realtime for the 'cases' table
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('global-case-updates')
       .on(
         'postgres_changes',
         {
