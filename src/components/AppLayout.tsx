@@ -154,6 +154,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+    ...(Platform.OS === 'web' ? { 
+      position: 'fixed' as any, 
+      top: 0, 
+      left: 0, 
+      right: 0, 
+      bottom: 0,
+      height: '100%' as any,
+      width: '100%' as any,
+    } : {}),
   },
   containerDark: {
     backgroundColor: "#0F172A",
@@ -220,6 +229,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : {}),
   },
   contentInner: {
     paddingBottom: 20,
