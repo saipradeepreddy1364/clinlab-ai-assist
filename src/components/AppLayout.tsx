@@ -26,7 +26,14 @@ import { NotificationSidebar } from "./NotificationSidebar";
 
 const { width } = Dimensions.get("window");
 
-const doctorTabs = [
+type Tab = {
+  name: string;
+  label: string;
+  icon: any;
+  primary?: boolean;
+};
+
+const doctorTabs: Tab[] = [
   { name: "Dashboard", label: "Home", icon: LayoutDashboard },
   { name: "NewCase", label: "New", icon: FilePlus2 },
   { name: "AIEngine", label: "AI", icon: Sparkles, primary: true },
@@ -34,11 +41,9 @@ const doctorTabs = [
   { name: "Uploads", label: "Files", icon: Upload },
 ];
 
-const orgTabs = [
+const orgTabs: Tab[] = [
   { name: "OrgDashboard", label: "Overview", icon: LayoutGrid },
   { name: "OrgCases", label: "Cases", icon: ClipboardList },
-  { name: "AIEngine", label: "AI", icon: Sparkles, primary: true },
-  { name: "Patients", label: "Records", icon: Users },
   { name: "OrgReports", label: "Reports", icon: FileSearch },
 ];
 
