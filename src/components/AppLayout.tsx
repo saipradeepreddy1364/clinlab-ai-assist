@@ -74,7 +74,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const isDark = theme === "dark";
 
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       {/* App header */}
       <View style={[styles.header, isDark && styles.headerDark]}>
         <View style={styles.headerLeft}>
@@ -146,7 +146,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           );
         })}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
-    ...(Platform.OS === 'web' ? { height: '100vh' as any, overflow: 'hidden' as any } : { height: '100%' as any }),
   },
   containerDark: {
     backgroundColor: "#0F172A",
@@ -221,17 +220,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : {}),
   },
   contentInner: {
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   tabBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
+    height: 70,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     flexDirection: "row",
     paddingHorizontal: 8,
