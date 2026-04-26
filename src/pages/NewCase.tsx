@@ -22,6 +22,24 @@ const NewCase = () => {
     case_type: "active",
   });
   const [caseTypeModalVisible, setCaseTypeModalVisible] = useState(false);
+  
+  React.useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.role === 'organization') {
+          navigation.navigate("OrgDashboard");
+        }
+      }
+    };
+    checkAccess();
+  }, [navigation]);
 
 
   const toggleSymptom = (s: string) =>

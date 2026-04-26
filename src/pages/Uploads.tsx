@@ -49,6 +49,23 @@ const Uploads = () => {
   });
 
   useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.role === 'organization') {
+          navigation.navigate("OrgDashboard");
+          return;
+        }
+      }
+    };
+    checkAccess();
+
     const fetchFiles = async () => {
       const guestValue = await AsyncStorage.getItem("guestMode");
       const isGuest = guestValue === "true";

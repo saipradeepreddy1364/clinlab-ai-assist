@@ -60,11 +60,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const route = useRoute();
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [role, setRole] = useState<"doctor" | "organization" | "guest">("doctor");
+  const [role, setRole] = useState<string>("guest");
   
   useNotifications();
 
   useEffect(() => {
+    let authListener: any;
+
     const checkUser = async () => {
       const guestValue = await AsyncStorage.getItem("guestMode");
       const isGuest = guestValue === "true";
@@ -76,22 +78,48 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log("AppLayout: No session found");
         navigation.navigate("Login");
         return;
       }
 
-      // Fetch profile for role
-      const { data: profile } = await supabase
+      // 1. Try metadata first (faster)
+      const metaRole = session.user.user_metadata?.role;
+      if (metaRole) {
+        console.log("AppLayout: Detected role from metadata:", metaRole);
+        setRole(metaRole);
+      }
+
+      // 2. Always fetch profile to be sure and get latest status
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
         .single();
       
       if (profile) {
+        console.log("AppLayout: Detected role from profile table:", profile.role);
         setRole(profile.role);
+      } else if (error) {
+        console.error("AppLayout: Error fetching profile:", error);
       }
     };
+
     checkUser();
+
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("AppLayout: Auth state change:", event);
+      if (session) {
+        checkUser();
+      } else {
+        setRole("guest");
+      }
+    });
+    authListener = data;
+
+    return () => {
+      if (authListener?.subscription) authListener.subscription.unsubscribe();
+    };
   }, [navigation]);
 
   const activeTabs = role === "organization" ? orgTabs : doctorTabs;
@@ -115,7 +143,12 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <Stethoscope size={18} color="#FFFFFF" />
           </View>
           <View>
-            <Text style={styles.brandText}>ClinLab</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.brandText}>ClinLab</Text>
+              <View style={[styles.roleBadge, role === 'organization' ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
+                <Text style={styles.roleBadgeText}>{role}</Text>
+              </View>
+            </View>
             <Text style={[styles.headerTitle, isDark && styles.textWhite]}>{title}</Text>
           </View>
         </View>
@@ -230,6 +263,23 @@ const styles = StyleSheet.create({
   brandText: {
     fontSize: 11,
     color: "#64748B",
+  },
+  roleBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  roleBadgeOrg: {
+    backgroundColor: "#F1F5F9",
+  },
+  roleBadgeDr: {
+    backgroundColor: "#E0F2FE",
+  },
+  roleBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#475569",
+    textTransform: "uppercase",
   },
   headerTitle: {
     fontSize: 16,
