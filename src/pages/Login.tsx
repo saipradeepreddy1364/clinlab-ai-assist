@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Dimensions, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Dimensions, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -31,7 +31,7 @@ const Login = () => {
       if (error) throw error;
       navigation.navigate("Dashboard");
     } catch (error: any) {
-      // toast native replacement could go here
+      Alert.alert("Login Failed", error.message);
     } finally {
       setLoading(false);
     }

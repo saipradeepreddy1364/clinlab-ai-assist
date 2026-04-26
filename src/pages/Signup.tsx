@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ChevronDown } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
@@ -63,10 +63,35 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.user) {
-        navigation.navigate("Dashboard");
+        // Manually create profile in public.profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id,
+              full_name: formData.name,
+              phone: formData.phone,
+              role: authType,
+              status: authType === "organization" ? "approved" : "pending",
+              specialization: authType === "doctor" ? formData.specialization : null,
+              org_id: authType === "doctor" ? formData.organization.id : null,
+              org_name: authType === "doctor" ? formData.organization.name : null,
+            }
+          ]);
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          // Don't throw here, as the user is still created in Auth
+        }
+
+        Alert.alert(
+          "Registration Successful",
+          "Please check your email to confirm your account before signing in.",
+          [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+        );
       }
     } catch (error: any) {
-      console.error(error.message);
+      Alert.alert("Registration Failed", error.message);
     } finally {
       setLoading(false);
     }
