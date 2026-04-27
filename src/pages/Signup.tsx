@@ -36,6 +36,7 @@ const Signup = () => {
   });
   const [googleResults, setGoogleResults] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
   useEffect(() => {
@@ -150,9 +151,6 @@ const Signup = () => {
 
       if (data.user) {
         setTempUserId(data.user.id);
-        // Show verification modal instead of immediate redirect
-        setVerifying(true);
-        setVerifyModalVisible(true);
         
         // Silently handle profile upsert in background
         supabase.from('profiles').upsert([{
@@ -165,16 +163,21 @@ const Signup = () => {
           org_id: authType === "doctor" ? formData.organization.id : null,
           org_name: authType === "doctor" ? formData.organization.name : null,
         }], { onConflict: 'id' }).then(({ error: pe }) => {
-          if (pe) console.warn("Background profile sync warning:", pe.message);
+          // If it's a real error (not just a duplicate), log it but don't stop the user
+          if (pe && !pe.message.includes("duplicate key")) {
+            console.warn("Background profile sync warning:", pe.message);
+          }
         });
+
+        // Show verification modal immediately
+        setVerifying(true);
+        setVerifyModalVisible(true);
       }
     } catch (error: any) {
-      if (error.message.includes("Invalid login credentials")) {
-        showAlert("Access Denied", "Incorrect password or account not found. Please check your credentials.");
-      } else if (error.message.includes("Email not confirmed")) {
-        showAlert("Verification Needed", "Please confirm your professional email before logging in.");
+      if (error.message.includes("already registered")) {
+        showAlert("Account Exists", "This email is already registered. Please sign in instead.");
       } else {
-        showAlert("Login Failed", error.message);
+        showAlert("Registration Note", error.message || "Please check your email to verify your account.");
       }
     } finally {
       setLoading(false);
@@ -240,7 +243,10 @@ const Signup = () => {
                 style={styles.input}
                 placeholder={authType === "organization" ? "e.g. City Dental Clinic" : "Dr. Aarav Singh"}
                 value={formData.name}
-                onChangeText={(v) => setFormData({ ...formData, name: v })}
+                onChangeText={(v) => {
+                  setFormData({ ...formData, name: v });
+                  if (authType === "organization") setShowSuggestions(true);
+                }}
                 placeholderTextColor="#94A3B8"
               />
               {isSearching && (
@@ -250,7 +256,7 @@ const Signup = () => {
               )}
             </View>
             
-            {authType === "organization" && googleResults.length > 0 && (
+            {authType === "organization" && showSuggestions && googleResults.length > 0 && (
               <View style={styles.inlineDropdown}>
                 <Text style={styles.dropdownLabel}>Suggested Official Names (Web Search)</Text>
                 {googleResults[0] === "NO_RESULTS" ? (
@@ -264,6 +270,7 @@ const Signup = () => {
                       style={styles.inlineOption}
                       onPress={() => {
                         setFormData({ ...formData, name: res });
+                        setShowSuggestions(false);
                         setGoogleResults([]);
                       }}
                     >
