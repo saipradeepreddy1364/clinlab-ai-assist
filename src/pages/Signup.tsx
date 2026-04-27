@@ -138,21 +138,14 @@ const Signup = () => {
             }
           ]);
 
-        if (profileError) {
-          console.error("Profile creation error:", profileError);
-          // If 401/403, it's likely because email isn't verified yet
-          Alert.alert(
-            "Almost there!",
-            "Your account is created, but we couldn't set up your clinical profile yet. Please check your email and click the verification link, then sign in.",
-            [{ text: "OK", onPress: () => navigation.navigate("Login") }]
-          );
-          return;
-        }
+        const successMessage = authType === "organization" 
+          ? "Your organization account has been created. Redirecting to your dashboard..." 
+          : "Your clinical profile has been created. Redirecting to approval status...";
 
         Alert.alert(
           "Registration Successful",
-          "Your account has been created. If you don't have auto-login enabled, please check your email for a verification link before signing in.",
-          [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+          successMessage,
+          [{ text: "OK", onPress: () => navigation.replace(authType === "organization" ? "OrgDashboard" : "Dashboard") }]
         );
       }
     } catch (error: any) {
@@ -164,13 +157,14 @@ const Signup = () => {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
     >
       <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="always"
       >
         <View style={styles.brand}>
           <View style={styles.logoBox}>
