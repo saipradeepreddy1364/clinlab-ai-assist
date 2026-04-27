@@ -4,6 +4,17 @@ import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ChevronDown, Search } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
+const showAlert = (title: string, message: string, actions?: any[]) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+    if (actions && actions[0] && actions[0].onPress) {
+      actions[0].onPress();
+    }
+  } else {
+    Alert.alert(title, message, actions);
+  }
+};
+
 const Signup = () => {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
@@ -98,18 +109,18 @@ const Signup = () => {
 
   const handleSignup = async () => {
     // Basic validation
-    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-      Alert.alert("Missing Fields", "All fields are mandatory. Please fill in all details.");
+    if (!formData.email || !formData.password || !formData.name || !formData.phone) {
+      showAlert("Missing Fields", "Please fill in all mandatory fields.");
       return;
     }
 
     if (authType === "doctor" && (!formData.specialization || !formData.organization.id)) {
-      Alert.alert("Missing Fields", "Please provide your specialization and select an organization.");
+      showAlert("Clinical Details Required", "Please select your role and organization.");
       return;
     }
 
     if (formData.password.length < 6) {
-      Alert.alert("Weak Password", "Password must be at least 6 characters long.");
+      showAlert("Weak Password", "Password must be at least 6 characters long.");
       return;
     }
 
@@ -154,18 +165,18 @@ const Signup = () => {
         if (profileError) {
           console.error("Profile creation error:", profileError);
           // If the profile row failed, we should know why
-          Alert.alert("Profile Error", `Account created but profile failed: ${profileError.message}`);
+          showAlert("Profile Error", `Account created but profile failed: ${profileError.message}`);
           return;
         }
 
-        Alert.alert(
+        showAlert(
           "Registration Successful",
           authType === "organization" ? "Your organization is now registered!" : "Your application has been submitted to your organization.",
           [{ text: "OK", onPress: () => navigation.replace(authType === "organization" ? "OrgDashboard" : "Dashboard") }]
         );
       }
     } catch (error: any) {
-      Alert.alert("Registration Failed", error.message);
+      showAlert("Error", error.message);
     } finally {
       setLoading(false);
     }

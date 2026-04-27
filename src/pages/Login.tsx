@@ -5,6 +5,17 @@ import { Stethoscope, Loader2 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 
+const showAlert = (title: string, message: string, actions?: any[]) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+    if (actions && actions[0] && actions[0].onPress) {
+      actions[0].onPress();
+    }
+  } else {
+    Alert.alert(title, message, actions);
+  }
+};
+
 const Login = () => {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
@@ -34,8 +45,8 @@ const Login = () => {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim(),
+        password: password.trim(),
       });
 
       if (error) throw error;
@@ -50,7 +61,7 @@ const Login = () => {
         if (profileError) throw profileError;
 
         if (!profile) {
-          Alert.alert("Profile Missing", "Your authentication is valid, but we couldn't find your clinical profile. Please contact support.");
+          showAlert("Profile Missing", "Your authentication is valid, but we couldn't find your clinical profile. Please contact support.");
           setLoading(false);
           return;
         }
@@ -63,9 +74,9 @@ const Login = () => {
       }
     } catch (error: any) {
       if (error.message.includes("Email not confirmed")) {
-        Alert.alert("Email Verification Required", "Please check your inbox and click the verification link before signing in. Alternatively, you can disable email confirmation in your Supabase dashboard.");
+        showAlert("Email Verification Required", "Please check your inbox and click the verification link before signing in. Alternatively, you can disable email confirmation in your Supabase dashboard.");
       } else {
-        Alert.alert("Login Failed", error.message);
+        showAlert("Login Failed", error.message);
       }
     } finally {
       setLoading(false);
