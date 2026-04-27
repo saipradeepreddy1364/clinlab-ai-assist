@@ -42,8 +42,9 @@ const Signup = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigation.navigate("Dashboard");
+      // Only auto-redirect if they are already logged in AND verified
+      if (session && session.user.email_confirmed_at) {
+        navigation.navigate(session.user.user_metadata?.role === "organization" ? "OrgDashboard" : "Dashboard");
       }
     });
 
@@ -209,13 +210,15 @@ const Signup = () => {
         if (authType === "doctor") {
           showAlert(
             "Application Sent", 
-            `Your request has been sent to ${formData.organization.name}. (ID: ${formData.organization.id})`
+            `Your request has been sent to ${formData.organization.name}. Your account is now pending approval.`
           );
+          // Redirect doctors immediately to Dashboard
+          navigation.replace("Dashboard");
+        } else {
+          // Show verification modal for organizations
+          setVerifying(true);
+          setVerifyModalVisible(true);
         }
-        
-        // Show verification modal immediately
-        setVerifying(true);
-        setVerifyModalVisible(true);
       }
     } catch (error: any) {
       if (error.message.includes("already registered")) {

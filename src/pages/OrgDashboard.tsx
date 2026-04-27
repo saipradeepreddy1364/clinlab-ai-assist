@@ -17,6 +17,17 @@ import AppLayout from "@/components/AppLayout";
 
 const { width } = Dimensions.get("window");
 
+const showAlert = (title: string, message: string, actions?: any[]) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+    if (actions && actions[0] && actions[0].onPress) {
+      actions[0].onPress();
+    }
+  } else {
+    Alert.alert(title, message, actions);
+  }
+};
+
 const OrgDashboard = () => {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
@@ -31,8 +42,8 @@ const OrgDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
+    try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -85,10 +96,27 @@ const OrgDashboard = () => {
       console.log("OrgDashboard: Found pending doctors:", count);
       
       setPendingCount(count || 0);
-
+    } catch (err) {
+      console.error("OrgDashboard Error:", err);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
+  const scanAllDoctors = async () => {
+    const { data, count, error } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact' })
+      .eq('role', 'doctor');
+    
+    if (error) {
+      showAlert("Scan Error", error.message);
+    } else {
+      showAlert("Deep Scan Result", `Found ${count} total doctors in the database. (If this is 0, signup is failing. If this is more than 0 but your dashboard shows 0, it's an RLS policy issue!)`);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
 
     // Add Real-time subscription for Pending Approvals
@@ -108,6 +136,7 @@ const OrgDashboard = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
 
   if (loading) {
     return (
@@ -284,6 +313,12 @@ const OrgDashboard = () => {
           <Text style={{ fontSize: 11, color: '#64748B' }}>Your Org ID: {profile?.id || "Loading..."}</Text>
           <Text style={{ fontSize: 11, color: '#64748B' }}>Pending Status: {pendingCount} found</Text>
           <Text style={{ fontSize: 11, color: '#64748B' }}>Total Staff Found: {doctors.length}</Text>
+          <TouchableOpacity 
+            onPress={scanAllDoctors}
+            style={{ marginTop: 8, backgroundColor: '#0EA5E9', padding: 6, borderRadius: 6, alignSelf: 'flex-start' }}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' }}>RUN DEEP SCAN</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </AppLayout>
