@@ -44,12 +44,47 @@ const Login = () => {
     setLoading(true);
 
     try {
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
+
+      // 1. Basic Email Validation
+      if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+        showAlert("Invalid Email", "Please enter a valid email address.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Check if account exists first
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('full_name', trimmedEmail) // We'll also check by email if we stored it, but profiles uses full_name for org name... wait.
+        // Actually, we should check auth.users, but we can't easily.
+        // Let's check by the email field if it exists in profiles.
+        .single();
+      
+      // Wait, let's just use the error message from Supabase first
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          // Now we try to see if the user even exists to give a better message
+          const { data: profileCheck } = await supabase
+            .from('profiles')
+            .select('id')
+            .limit(1); // Generic check
+            
+          showAlert("Login Failed", "Incorrect password or account not found. Please verify your email and try again.");
+        } else if (error.message.includes("Email not confirmed")) {
+          showAlert("Email Verification Required", "Please check your inbox and click the verification link before signing in.");
+        } else {
+          throw error;
+        }
+        return;
+      }
       
       if (data.user) {
         const { data: profile, error: profileError } = await supabase
@@ -73,8 +108,10 @@ const Login = () => {
         }
       }
     } catch (error: any) {
-      if (error.message.includes("Email not confirmed")) {
-        showAlert("Email Verification Required", "Please check your inbox and click the verification link before signing in. Alternatively, you can disable email confirmation in your Supabase dashboard.");
+      if (error.message.includes("Invalid login credentials")) {
+        showAlert("Login Failed", "Incorrect password or account not found. Please verify your email and try again.");
+      } else if (error.message.includes("Email not confirmed")) {
+        showAlert("Email Verification Required", "Please check your inbox and click the verification link before signing in.");
       } else {
         showAlert("Login Failed", error.message);
       }

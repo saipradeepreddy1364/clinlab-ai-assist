@@ -169,7 +169,13 @@ const Signup = () => {
         });
       }
     } catch (error: any) {
-      showAlert("Registration Note", error.message || "Please check your email to verify your account.");
+      if (error.message.includes("Invalid login credentials")) {
+        showAlert("Access Denied", "Incorrect password or account not found. Please check your credentials.");
+      } else if (error.message.includes("Email not confirmed")) {
+        showAlert("Verification Needed", "Please confirm your professional email before logging in.");
+      } else {
+        showAlert("Login Failed", error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -204,16 +210,9 @@ const Signup = () => {
           keyboardShouldPersistTaps="always"
           nestedScrollEnabled={true}
         >
-        <View style={styles.brand}>
-          <View style={styles.logoBox}>
-            <Stethoscope size={20} color="#FFFFFF" />
-          </View>
-          <Text style={styles.brandName}>ClinLab</Text>
-        </View>
-
         <View style={styles.hero}>
-          <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>Choose your account type to continue.</Text>
+          <Text style={styles.title}>Create account</Text>
+          <Text style={styles.subtitle}>Fill in your details to get started.</Text>
         </View>
 
         <View style={styles.tabContainer}>
