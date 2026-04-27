@@ -184,7 +184,7 @@ const Signup = () => {
         setTempUserId(data.user.id);
         
         // Silently handle profile upsert in background
-        supabase.from('profiles').upsert([{
+        const { error: profileError } = await supabase.from('profiles').upsert([{
           id: data.user.id,
           full_name: formData.name,
           phone: formData.phone,
@@ -193,13 +193,12 @@ const Signup = () => {
           specialization: authType === "doctor" ? formData.specialization : null,
           org_id: authType === "doctor" ? formData.organization.id : null,
           org_name: authType === "doctor" ? formData.organization.name : null,
-        }], { onConflict: 'id' }).then(({ error: pe }) => {
-          // If it's a real error (not just a duplicate), log it but don't stop the user
-          if (pe && !pe.message.includes("duplicate key")) {
-            console.warn("Background profile sync warning:", pe.message);
-          }
-        });
+        }], { onConflict: 'id' });
 
+        if (profileError && !profileError.message.includes("duplicate key")) {
+          console.error("Critical Profile Sync Error:", profileError.message);
+        }
+        
         // Show verification modal immediately
         setVerifying(true);
         setVerifyModalVisible(true);

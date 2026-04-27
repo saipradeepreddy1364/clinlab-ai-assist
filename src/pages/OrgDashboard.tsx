@@ -86,6 +86,23 @@ const OrgDashboard = () => {
     };
 
     fetchData();
+
+    // Add Real-time subscription for Pending Approvals
+    const channel = supabase
+      .channel('org-dashboard-updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles' 
+      }, () => {
+        console.log("OrgDashboard: Detected profile change, refreshing...");
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
