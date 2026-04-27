@@ -138,8 +138,19 @@ const OrgDashboard = () => {
         </View>
 
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Clinical Overview</Text>
-          <Text style={styles.subtext}>Monitor activity across all {doctors.length} departments.</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={styles.headerTitle}>Clinical Overview</Text>
+              <Text style={styles.subtext}>Monitor activity across all {doctors.length} departments.</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => fetchData()}
+              style={{ backgroundColor: '#F1F5F9', padding: 8, borderRadius: 10 }}
+            >
+              <Activity size={18} color="#0EA5E9" />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize: 9, color: '#94A3B8', marginTop: 4 }}>ID: {profile?.id || "..."}</Text>
         </View>
         
         {/* Pending Approval Alert (Only shows if there are requests) */}

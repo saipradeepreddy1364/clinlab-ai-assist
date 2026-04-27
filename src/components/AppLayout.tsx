@@ -63,7 +63,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { theme, toggle } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
-  const [hasNewNotifications, setHasNewNotifications] = useState(true);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [role, setRole] = useState<string>("loading");
   
@@ -105,6 +105,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       if (profile) {
         console.log("AppLayout: Detected role from profile table:", profile.role);
         setRole(profile.role);
+        
+        // If organization, check for pending doctors immediately
+        if (profile.role === 'organization') {
+          const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('org_id', session.user.id)
+            .eq('role', 'doctor')
+            .eq('status', 'pending');
+          
+          setHasNewNotifications(count ? count > 0 : false);
+        }
       } else if (error) {
         console.error("AppLayout: Error fetching profile:", error);
       }
@@ -112,18 +124,50 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
     checkUser();
 
+    // Global listener for pending approvals (for organizations)
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const channel = supabase
+        .channel('global-approvals')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'profiles'
+        }, async (payload) => {
+          // Re-check count on any profile change
+          const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('org_id', session.user.id)
+            .eq('role', 'doctor')
+            .eq('status', 'pending');
+          
+          setHasNewNotifications(count ? count > 0 : false);
+        })
+        .subscribe();
+      
+      return channel;
+    };
+
+    let globalChannel: any;
+    setupRealtime().then(ch => globalChannel = ch);
+
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("AppLayout: Auth state change:", event);
       if (session) {
         checkUser();
       } else {
         setRole("guest");
+        setHasNewNotifications(false);
       }
     });
     authListener = data;
 
     return () => {
       if (authListener?.subscription) authListener.subscription.unsubscribe();
+      if (globalChannel) supabase.removeChannel(globalChannel);
     };
   }, [navigation]);
 

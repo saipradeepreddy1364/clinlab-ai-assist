@@ -198,6 +198,14 @@ const Signup = () => {
         if (profileError && !profileError.message.includes("duplicate key")) {
           console.error("Critical Profile Sync Error:", profileError.message);
         }
+
+        // Add explicit confirmation alert for doctors
+        if (authType === "doctor") {
+          showAlert(
+            "Application Sent", 
+            `Your request has been sent to ${formData.organization.name}. (ID: ${formData.organization.id})`
+          );
+        }
         
         // Show verification modal immediately
         setVerifying(true);
