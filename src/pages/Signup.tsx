@@ -164,10 +164,14 @@ const Signup = () => {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1 }}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.brand}>
           <View style={styles.logoBox}>
             <Stethoscope size={20} color="#FFFFFF" />
@@ -405,6 +409,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === "ios" ? 50 : 30,
     gap: 16,
+    flexGrow: 1,
   },
   brand: {
     flexDirection: "row",
