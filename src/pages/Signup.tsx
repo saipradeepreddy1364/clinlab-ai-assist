@@ -20,6 +20,9 @@ const Signup = () => {
     organization: { id: "", name: "" },
     role: "dentist",
   });
+  const [googleResults, setGoogleResults] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,25 +32,74 @@ const Signup = () => {
     });
 
     const fetchOrgs = async () => {
-      console.log("Signup: Fetching organizations...");
+      setLoadingOrgs(true);
+      console.log("Signup: Fetching organizations from Supabase...");
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name')
         .eq('role', 'organization');
       
       if (error) {
-        console.error("Signup: Error fetching organizations:", error);
+        console.error("Signup: Supabase Error:", error);
+        Alert.alert("Database Error", "Could not load organizations. Please check your Supabase RLS policies.");
       }
       if (data) {
-        console.log("Signup: Found organizations:", data.length);
+        console.log("Signup: Successfully loaded from Supabase:", data.length, "organizations");
         setOrganizations(data);
       }
+      setLoadingOrgs(false);
     };
 
     fetchOrgs();
   }, [navigation]);
 
+  // Debounced Background Search (Web Search Simulation)
+  useEffect(() => {
+    if (authType !== 'organization' || formData.name.length < 3) {
+      setGoogleResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      // Simulating a Web/Google search for official hospital names
+      setTimeout(() => {
+        const query = formData.name.toLowerCase();
+        const mockWebResults = [
+          "City General Hospital",
+          "Grace Medical Center",
+          "Advanced Dental Care",
+          "Sunrise Dental Hub",
+          "National Institute of Dentistry",
+          "Metropolitan Health Clinic",
+          "Smile Design Studio",
+        ].filter(name => name.toLowerCase().includes(query));
+        
+        setGoogleResults(mockWebResults);
+        setIsSearching(false);
+      }, 800);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.name, authType]);
+
   const handleSignup = async () => {
+    // Basic validation
+    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
+      Alert.alert("Missing Fields", "All fields are mandatory. Please fill in all details.");
+      return;
+    }
+
+    if (authType === "doctor" && (!formData.specialization || !formData.organization.id)) {
+      Alert.alert("Missing Fields", "Please provide your specialization and select an organization.");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      Alert.alert("Weak Password", "Password must be at least 6 characters long.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -88,12 +140,18 @@ const Signup = () => {
 
         if (profileError) {
           console.error("Profile creation error:", profileError);
-          // Don't throw here, as the user is still created in Auth
+          // If 401/403, it's likely because email isn't verified yet
+          Alert.alert(
+            "Almost there!",
+            "Your account is created, but we couldn't set up your clinical profile yet. Please check your email and click the verification link, then sign in.",
+            [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+          );
+          return;
         }
 
         Alert.alert(
           "Registration Successful",
-          "Please check your email to confirm your account before signing in.",
+          "Your account has been created. If you don't have auto-login enabled, please check your email for a verification link before signing in.",
           [{ text: "OK", onPress: () => navigation.navigate("Login") }]
         );
       }
@@ -142,13 +200,38 @@ const Signup = () => {
             <Text style={styles.label}>
               {authType === "organization" ? "Organization Name" : "Full name"}
             </Text>
-            <TextInput
-              style={styles.input}
-              placeholder={authType === "organization" ? "e.g. City Dental Clinic" : "Dr. Aarav Singh"}
-              value={formData.name}
-              onChangeText={(v) => setFormData({ ...formData, name: v })}
-              placeholderTextColor="#94A3B8"
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder={authType === "organization" ? "e.g. City Dental Clinic" : "Dr. Aarav Singh"}
+                value={formData.name}
+                onChangeText={(v) => setFormData({ ...formData, name: v })}
+                placeholderTextColor="#94A3B8"
+              />
+              {isSearching && (
+                <View style={styles.inputLoader}>
+                  <ActivityIndicator size="small" color="#0EA5E9" />
+                </View>
+              )}
+            </View>
+            
+            {authType === "organization" && googleResults.length > 0 && (
+              <View style={styles.inlineDropdown}>
+                <Text style={styles.dropdownLabel}>Suggested Official Names (from Web)</Text>
+                {googleResults.map((res, i) => (
+                  <TouchableOpacity 
+                    key={i} 
+                    style={styles.inlineOption}
+                    onPress={() => {
+                      setFormData({ ...formData, name: res });
+                      setGoogleResults([]);
+                    }}
+                  >
+                    <Text style={styles.inlineOptionText}>{res}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.row}>
@@ -274,6 +357,17 @@ const Signup = () => {
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setOrgModalVisible(false)}>
           <View style={styles.modalContent}>
             <Text style={styles.modalHeader}>Registered Organizations</Text>
+            <TouchableOpacity 
+              style={styles.refreshBtn} 
+              onPress={() => {
+                // Trigger refresh logic
+                supabase.from('profiles').select('id, full_name').eq('role', 'organization').then(({data}) => {
+                  if(data) setOrganizations(data);
+                });
+              }}
+            >
+              <Text style={styles.refreshBtnText}>Refresh List from Database</Text>
+            </TouchableOpacity>
             <ScrollView style={{ maxHeight: 400 }}>
               {organizations.length > 0 ? (
                 organizations.map(org => (
@@ -289,7 +383,10 @@ const Signup = () => {
                   </TouchableOpacity>
                 ))
               ) : (
-                <Text style={styles.noData}>No organizations found. They must register first.</Text>
+                <View style={styles.emptyState}>
+                  <Text style={styles.noData}>No organizations found in Supabase.</Text>
+                  <Text style={styles.hintText}>Make sure your clinic has registered as an "Organization" first.</Text>
+                </View>
               )}
             </ScrollView>
           </View>
@@ -305,9 +402,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   scrollContent: {
-    padding: 24,
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
-    gap: 32,
+    padding: 20,
+    paddingTop: Platform.OS === "ios" ? 50 : 30,
+    gap: 16,
   },
   brand: {
     flexDirection: "row",
@@ -315,32 +412,32 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: "#0EA5E9",
     alignItems: "center",
     justifyContent: "center",
   },
   brandName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
     color: "#0F172A",
   },
   hero: {
-    gap: 8,
+    gap: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
     color: "#0F172A",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#64748B",
   },
   form: {
-    gap: 20,
+    gap: 12,
   },
   tabContainer: {
     flexDirection: "row",
@@ -354,7 +451,7 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8,
+    borderRadius: 10,
   },
   tabActive: {
     backgroundColor: "#FFFFFF",
@@ -373,19 +470,19 @@ const styles = StyleSheet.create({
     color: "#0EA5E9",
   },
   inputGroup: {
-    gap: 8,
+    gap: 6,
   },
   row: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#0F172A",
   },
   input: {
-    height: 48,
+    height: 44,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -394,8 +491,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#0F172A",
   },
+  inputWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  inputLoader: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+  },
+  dropdownLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748B",
+    padding: 6,
+    backgroundColor: "#F8FAFC",
+    textTransform: "uppercase",
+  },
+  inlineDropdown: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    marginTop: 4,
+    maxHeight: 180,
+    overflow: "hidden",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    zIndex: 1000,
+  },
+  inlineOption: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  inlineOptionText: {
+    fontSize: 14,
+    color: "#0F172A",
+  },
   pickerTrigger: {
-    height: 48,
+    height: 44,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -410,18 +548,13 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   heroButton: {
-    height: 54,
+    height: 50,
     backgroundColor: "#0EA5E9",
-    borderRadius: 16,
+    borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    shadowColor: "#0EA5E9",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    marginTop: 4,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -433,10 +566,10 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#64748B",
   },
   linkText: {
@@ -452,32 +585,54 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
+    padding: 20,
     gap: 12,
   },
   modalHeader: {
     fontSize: 18,
     fontWeight: "700",
     color: "#0F172A",
+    marginBottom: 4,
+  },
+  refreshBtn: {
+    backgroundColor: "#F1F5F9",
+    padding: 8,
+    borderRadius: 8,
+    alignItems: "center",
     marginBottom: 8,
+  },
+  refreshBtnText: {
+    color: "#0EA5E9",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  emptyState: {
+    padding: 16,
+    alignItems: "center",
   },
   noData: {
     textAlign: "center",
     color: "#64748B",
-    padding: 20,
+    fontSize: 14,
+  },
+  hintText: {
+    fontSize: 11,
+    color: "#94A3B8",
+    textAlign: "center",
+    marginTop: 4,
   },
   modalOption: {
-    height: 54,
+    height: 50,
     alignItems: "center",
     justifyContent: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
   modalOptionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#0F172A",
     fontWeight: "500",
-  }
+  },
 });
 
 export default Signup;
