@@ -86,17 +86,42 @@ const Signup = () => {
       console.log("Signup: Live searching global directory for:", formData.name);
       
       try {
-        // Using Photon (OpenStreetMap) API - 100% Free & Global
-        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(formData.name)}&limit=8&osm_tag=amenity:hospital`);
+        // Using Photon (OpenStreetMap) API - Expanded to include all medical types
+        // We search for Hospital, Clinic, Dentist, Doctors, and Pharmacy to match "Google-like" results
+        const query = encodeURIComponent(formData.name);
+        const response = await fetch(`https://photon.komoot.io/api/?q=${query}&limit=10`);
         const data = await response.json();
         
         if (data.features && data.features.length > 0) {
-          const results = data.features.map((f: any) => {
-            const name = f.properties.name || f.properties.street || "Clinic";
-            const city = f.properties.city || f.properties.state || "";
-            return city ? `${name} (${city})` : name;
-          });
-          setGoogleResults(results);
+          // Filter for medical-related places to keep results clean
+          const medicalKeywords = ['hospital', 'clinic', 'dentist', 'doctor', 'medical', 'health', 'care', 'pharmacy', 'center'];
+          
+          const results = data.features
+            .filter((f: any) => {
+              const props = f.properties;
+              const type = (props.osm_value || "").toLowerCase();
+              const category = (props.osm_key || "").toLowerCase();
+              const name = (props.name || "").toLowerCase();
+              
+              return medicalKeywords.some(kw => 
+                type.includes(kw) || category.includes(kw) || name.includes(kw)
+              );
+            })
+            .map((f: any) => {
+              const p = f.properties;
+              const name = p.name || p.street || "Medical Center";
+              const city = p.city || p.town || p.district || "";
+              const state = p.state || p.country || "";
+              
+              const location = [city, state].filter(Boolean).join(", ");
+              return location ? `${name} (${location})` : name;
+            });
+
+          if (results.length > 0) {
+            setGoogleResults(results.slice(0, 8));
+          } else {
+            setGoogleResults(["NO_RESULTS"]);
+          }
         } else {
           setGoogleResults(["NO_RESULTS"]);
         }
