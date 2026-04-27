@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, SafeAreaView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ChevronDown, Search } from "lucide-react-native";
@@ -17,6 +17,7 @@ const showAlert = (title: string, message: string, actions?: any[]) => {
 
 const Signup = () => {
   const navigation = useNavigation<any>();
+  const scrollRef = useRef<ScrollView>(null);
   const [loading, setLoading] = useState(false);
   const [authType, setAuthType] = useState<"doctor" | "organization">("doctor");
   const [organizations, setOrganizations] = useState<any[]>([]);
@@ -110,6 +111,11 @@ const Signup = () => {
 
     return () => clearTimeout(timer);
   }, [formData.name, authType]);
+
+  // Scroll to top when switching auth type
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [authType]);
 
   const handleSignup = async () => {
     // Basic validation
@@ -207,8 +213,9 @@ const Signup = () => {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView 
+          ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.scrollContent, { flexGrow: 1, paddingBottom: 120 }]}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 1, paddingBottom: 300 }]}
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="always"
           nestedScrollEnabled={true}

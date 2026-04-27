@@ -28,6 +28,8 @@ const OrgDashboard = () => {
   });
   const [doctors, setDoctors] = useState<any[]>([]);
   const [recentCases, setRecentCases] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,6 +63,25 @@ const OrgDashboard = () => {
         setDoctors(profileList);
       }
 
+      // 3. Fetch Org Profile
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (p) setProfile(p);
+
+      // 4. Check for Pending Approvals
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', user.id)
+        .eq('role', 'doctor')
+        .eq('status', 'pending');
+      
+      setPendingCount(count || 0);
+
       setLoading(false);
     };
 
@@ -80,11 +101,44 @@ const OrgDashboard = () => {
   return (
     <AppLayout>
       <View style={styles.container}>
-        {/* Header Section */}
-        <View style={styles.header}>
-          <Text style={styles.welcomeText}>Organization Overview</Text>
-          <Text style={styles.subtext}>Monitor clinical activity across all departments.</Text>
+        {/* Welcome Card (Personalized) */}
+        <View style={styles.welcomeCard}>
+          <View style={styles.welcomeInfo}>
+            <Text style={styles.welcomeGreeting}>Welcome back,</Text>
+            <Text style={styles.welcomeName}>{profile?.full_name || "Organization"}</Text>
+            <View style={styles.verifiedBadge}>
+              <UserCheck size={12} color="#10B981" />
+              <Text style={styles.verifiedText}>Verified Clinical Hub</Text>
+            </View>
+          </View>
+          <View style={styles.welcomeIconBox}>
+            <Stethoscope size={32} color="#FFFFFF" />
+          </View>
         </View>
+
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Clinical Overview</Text>
+          <Text style={styles.subtext}>Monitor activity across all {doctors.length} departments.</Text>
+        </View>
+        
+        {/* Pending Approval Alert (Only shows if there are requests) */}
+        {pendingCount > 0 && (
+          <TouchableOpacity 
+            style={styles.approvalAlert}
+            onPress={() => navigation.navigate("ApprovalCenter")}
+          >
+            <View style={styles.alertIconBox}>
+              <Users size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.alertTitle}>Doctor Approval Required</Text>
+              <Text style={styles.alertSubtitle}>
+                {pendingCount} {pendingCount === 1 ? 'doctor is' : 'doctors are'} waiting for your access approval.
+              </Text>
+            </View>
+            <ChevronRight size={18} color="#0EA5E9" />
+          </TouchableOpacity>
+        )}
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -178,12 +232,18 @@ const OrgDashboard = () => {
         <TouchableOpacity style={styles.analyticsCard}>
           <View style={styles.analyticsHeader}>
             <TrendingUp size={24} color="#FFFFFF" />
-            <Text style={styles.analyticsTitle}>Clinical Insights</Text>
+            <Text style={styles.analyticsTitle}>Real-time Insights</Text>
           </View>
-          <Text style={styles.analyticsText}>Your organization has seen a 12% increase in patient throughput this week. Great job!</Text>
-          <View style={styles.analyticsButton}>
+          <Text style={styles.analyticsText}>
+            You have <Text style={{fontWeight: '700', color: '#FFFFFF'}}>{stats.active} active cases</Text> being handled by <Text style={{fontWeight: '700', color: '#FFFFFF'}}>{doctors.length} staff members</Text>. 
+            {stats.lab > 0 ? ` There are ${stats.lab} pending lab results to review.` : " All lab results are up to date."}
+          </Text>
+          <TouchableOpacity 
+            style={styles.analyticsButton}
+            onPress={() => navigation.navigate("OrgReports")}
+          >
             <Text style={styles.analyticsButtonText}>Detailed Reports</Text>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </View>
     </AppLayout>
@@ -201,16 +261,69 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   header: {
-    gap: 4,
+    gap: 2,
+    marginTop: 8,
   },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: "800",
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
     color: "#0F172A",
   },
   subtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#64748B",
+  },
+  welcomeCard: {
+    backgroundColor: "#0EA5E9",
+    borderRadius: 28,
+    padding: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  welcomeInfo: {
+    flex: 1,
+  },
+  welcomeGreeting: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "500",
+  },
+  welcomeName: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginVertical: 4,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    gap: 6,
+    marginTop: 4,
+  },
+  verifiedText: {
+    fontSize: 10,
+    color: "#FFFFFF",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  welcomeIconBox: {
+    width: 64,
+    height: 64,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   statsGrid: {
     flexDirection: "row",
@@ -430,7 +543,35 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: "#94A3B8",
-  }
+  },
+  approvalAlert: {
+    backgroundColor: "#F0F9FF",
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+  },
+  alertIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#0EA5E9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alertTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  alertSubtitle: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
+  },
 });
 
 export default OrgDashboard;
