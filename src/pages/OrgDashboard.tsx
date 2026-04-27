@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Platform, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
   Activity,
@@ -167,19 +167,8 @@ const OrgDashboard = () => {
         </View>
 
         <View style={styles.header}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text style={styles.headerTitle}>Clinical Overview</Text>
-              <Text style={styles.subtext}>Monitor activity across all {doctors.length} departments.</Text>
-            </View>
-            <TouchableOpacity 
-              onPress={() => fetchData()}
-              style={{ backgroundColor: '#F1F5F9', padding: 8, borderRadius: 10 }}
-            >
-              <Activity size={18} color="#0EA5E9" />
-            </TouchableOpacity>
-          </View>
-          <Text style={{ fontSize: 9, color: '#94A3B8', marginTop: 4 }}>ID: {profile?.id || "..."}</Text>
+          <Text style={styles.headerTitle}>Clinical Overview</Text>
+          <Text style={styles.subtext}>Monitor activity across all {doctors.length} departments.</Text>
         </View>
         
         {/* Pending Approval Alert (Only shows if there are requests) */}
@@ -306,20 +295,6 @@ const OrgDashboard = () => {
             <Text style={styles.analyticsButtonText}>Detailed Reports</Text>
           </TouchableOpacity>
         </TouchableOpacity>
-
-        {/* Diagnostic Footer (Temporary for debugging) */}
-        <View style={{ marginTop: 20, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: 'bold', marginBottom: 4 }}>DEBUG CONSOLE</Text>
-          <Text style={{ fontSize: 11, color: '#64748B' }}>Your Org ID: {profile?.id || "Loading..."}</Text>
-          <Text style={{ fontSize: 11, color: '#64748B' }}>Pending Status: {pendingCount} found</Text>
-          <Text style={{ fontSize: 11, color: '#64748B' }}>Total Staff Found: {doctors.length}</Text>
-          <TouchableOpacity 
-            onPress={scanAllDoctors}
-            style={{ marginTop: 8, backgroundColor: '#0EA5E9', padding: 6, borderRadius: 6, alignSelf: 'flex-start' }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' }}>RUN DEEP SCAN</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </AppLayout>
   );

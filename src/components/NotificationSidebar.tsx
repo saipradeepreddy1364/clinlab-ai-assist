@@ -37,7 +37,30 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
           time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           read: false
         }));
-        setNotifications(mapped);
+        setNotifications(prev => [...prev, ...mapped]);
+      }
+
+      // If Organization, fetch pending doctors
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      if (profile?.role === 'organization') {
+        const { data: pendingDoctors } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('org_id', user.id)
+          .eq('role', 'doctor')
+          .eq('status', 'pending');
+        
+        if (pendingDoctors && pendingDoctors.length > 0) {
+          const doctorAlerts: Notification[] = pendingDoctors.map(d => ({
+            id: `pending-${d.id}`,
+            title: "👨‍⚕️ Doctor Approval",
+            message: `${d.full_name} is waiting for access approval.`,
+            type: "urgent",
+            time: "Just Now",
+            read: false
+          }));
+          setNotifications(prev => [...doctorAlerts, ...prev]);
+        }
       }
     };
 
@@ -89,7 +112,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
         {notifications.length > 0 ? (
           notifications.map((n) => (
             <View key={n.id} style={[styles.notificationItem, !n.read && styles.unreadItem]}>
-              <View style={[styles.iconContainer, styles[`${n.type}Icon`]]}>
+              <View style={[styles.iconContainer, (styles as any)[`${n.type}Icon`]]}>
                 {getIcon(n.type)}
               </View>
               <View style={styles.content}>
