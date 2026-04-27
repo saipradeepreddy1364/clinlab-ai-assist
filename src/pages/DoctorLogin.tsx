@@ -41,7 +41,11 @@ const DoctorLogin = () => {
         navigation.navigate("Dashboard");
       }
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message);
+      if (error.message.includes("Email not confirmed")) {
+        Alert.alert("Email Verification Required", "Please check your professional inbox and click the verification link. If you didn't receive it, check your spam or ask your administrator.");
+      } else {
+        Alert.alert("Login Failed", error.message);
+      }
     } finally {
       setLoading(false);
     }

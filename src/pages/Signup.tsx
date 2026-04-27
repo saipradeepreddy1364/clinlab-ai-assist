@@ -67,6 +67,8 @@ const Signup = () => {
       setTimeout(() => {
         const query = formData.name.toLowerCase();
         const allPossibleResults = [
+          "Saveetha Dental College",
+          "Saveetha Medical Center",
           "City General Hospital",
           "Grace Medical Center",
           "Advanced Dental Care",
@@ -82,7 +84,9 @@ const Signup = () => {
           "Elite Eye & Dental Clinic",
         ];
         
-        const filtered = allPossibleResults.filter(name => name.toLowerCase().includes(query));
+        const filtered = allPossibleResults.filter(name => 
+          name.toLowerCase().includes(query.trim())
+        );
         console.log("Signup: Web search found:", filtered.length, "results");
         setGoogleResults(filtered.length > 0 ? filtered : ["NO_RESULTS"]);
         setIsSearching(false);

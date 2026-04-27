@@ -62,7 +62,11 @@ const Login = () => {
         }
       }
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message);
+      if (error.message.includes("Email not confirmed")) {
+        Alert.alert("Email Verification Required", "Please check your inbox and click the verification link before signing in. Alternatively, you can disable email confirmation in your Supabase dashboard.");
+      } else {
+        Alert.alert("Login Failed", error.message);
+      }
     } finally {
       setLoading(false);
     }
