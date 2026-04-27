@@ -65,7 +65,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const route = useRoute();
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [role, setRole] = useState<string>("guest");
+  const [role, setRole] = useState<string>("loading");
   
   useNotifications();
 
@@ -127,7 +127,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     };
   }, [navigation]);
 
-  const activeTabs = role === "organization" ? orgTabs : doctorTabs;
+  const activeTabs = role === "loading" ? [] : (role === "organization" ? orgTabs : doctorTabs);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("guestMode");
@@ -150,9 +150,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={styles.brandText}>ClinLab</Text>
-              <View style={[styles.roleBadge, role === 'organization' ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
-                <Text style={styles.roleBadgeText}>{role}</Text>
-              </View>
+              {role !== 'loading' && (
+                <View style={[styles.roleBadge, role === 'organization' ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
+                  <Text style={styles.roleBadgeText}>{role}</Text>
+                </View>
+              )}
             </View>
             <Text style={[styles.headerTitle, isDark && styles.textWhite]}>{title}</Text>
           </View>

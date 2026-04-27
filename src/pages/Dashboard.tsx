@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
   FilePlus2,
@@ -36,7 +36,7 @@ const Dashboard = () => {
   const [recentCases, setRecentCases] = useState<any[]>([]);
   const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<"doctor" | "organization">("doctor");
+  const [role, setRole] = useState<"doctor" | "organization" | "loading">("loading");
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -137,6 +137,16 @@ const Dashboard = () => {
 
     fetchData();
   }, []);
+
+  if (loading || (role === 'loading' && !isGuest)) {
+    return (
+      <AppLayout>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <ActivityIndicator size="large" color="#0EA5E9" />
+        </View>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
