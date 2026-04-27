@@ -29,12 +29,19 @@ const Signup = () => {
     });
 
     const fetchOrgs = async () => {
-      const { data } = await supabase
+      console.log("Signup: Fetching organizations...");
+      const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name')
         .eq('role', 'organization');
       
-      if (data) setOrganizations(data);
+      if (error) {
+        console.error("Signup: Error fetching organizations:", error);
+      }
+      if (data) {
+        console.log("Signup: Found organizations:", data.length);
+        setOrganizations(data);
+      }
     };
 
     fetchOrgs();
