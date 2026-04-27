@@ -415,9 +415,8 @@ const Signup = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-      </ScrollView>
     </KeyboardAvoidingView>
-    </SafeAreaView>
+  </SafeAreaView>
   );
 };
 
