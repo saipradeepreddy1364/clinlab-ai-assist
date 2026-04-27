@@ -22,6 +22,9 @@ const Signup = () => {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [roleModalVisible, setRoleModalVisible] = useState(false);
   const [orgModalVisible, setOrgModalVisible] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyModalVisible, setVerifyModalVisible] = useState(false);
+  const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -146,40 +149,45 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Manually create profile in public.profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              full_name: formData.name,
-              phone: formData.phone,
-              role: authType,
-              status: authType === "organization" ? "approved" : "pending",
-              specialization: authType === "doctor" ? formData.specialization : null,
-              org_id: authType === "doctor" ? formData.organization.id : null,
-              org_name: authType === "doctor" ? formData.organization.name : null,
-            }
-          ]);
-
-        if (profileError) {
-          console.error("Profile creation error:", profileError);
-          // If the profile row failed, we should know why
-          showAlert("Profile Error", `Account created but profile failed: ${profileError.message}`);
-          return;
-        }
-
-        showAlert(
-          "Registration Successful",
-          authType === "organization" ? "Your organization is now registered!" : "Your application has been submitted to your organization.",
-          [{ text: "OK", onPress: () => navigation.replace(authType === "organization" ? "OrgDashboard" : "Dashboard") }]
-        );
+        setTempUserId(data.user.id);
+        // Show verification modal instead of immediate redirect
+        setVerifying(true);
+        setVerifyModalVisible(true);
+        
+        // Silently handle profile upsert in background
+        supabase.from('profiles').upsert([{
+          id: data.user.id,
+          full_name: formData.name,
+          phone: formData.phone,
+          role: authType,
+          status: authType === "organization" ? "approved" : "pending",
+          specialization: authType === "doctor" ? formData.specialization : null,
+          org_id: authType === "doctor" ? formData.organization.id : null,
+          org_name: authType === "doctor" ? formData.organization.name : null,
+        }], { onConflict: 'id' }).then(({ error: pe }) => {
+          if (pe) console.warn("Background profile sync warning:", pe.message);
+        });
       }
     } catch (error: any) {
-      showAlert("Error", error.message);
+      showAlert("Registration Note", error.message || "Please check your email to verify your account.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkVerificationStatus = async () => {
+    setLoading(true);
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (session?.user?.email_confirmed_at) {
+      setVerifyModalVisible(false);
+      showAlert("Verification Successful", "Welcome to ClinLab! Taking you to your dashboard...", [
+        { text: "Let's Go", onPress: () => navigation.replace(authType === "organization" ? "OrgDashboard" : "Dashboard") }
+      ]);
+    } else {
+      showAlert("Not Verified Yet", "We couldn't confirm your verification. Please click the link in your email first.");
+    }
+    setLoading(false);
   };
 
   return (
@@ -348,12 +356,14 @@ const Signup = () => {
           )}
 
           <TouchableOpacity 
-            style={[styles.heroButton, loading && styles.buttonDisabled]} 
+            style={[styles.heroButton, (loading || verifying) && styles.buttonDisabled]} 
             onPress={handleSignup}
-            disabled={loading}
+            disabled={loading || verifying}
           >
             {loading ? <ActivityIndicator color="#FFFFFF" style={{ marginRight: 8 }} /> : null}
-            <Text style={styles.heroButtonText}>Create account</Text>
+            <Text style={styles.heroButtonText}>
+              {verifying ? "Waiting for Verification..." : "Create account"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -429,6 +439,46 @@ const Signup = () => {
             </ScrollView>
           </View>
         </TouchableOpacity>
+      </Modal>
+      <Modal visible={verifyModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingBottom: 40 }]}>
+            <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            
+            <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: '#F0F9FF', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 16 }}>
+              <Stethoscope size={32} color="#0EA5E9" />
+            </View>
+
+            <Text style={[styles.modalHeader, { textAlign: 'center' }]}>Verify Your Email</Text>
+            <Text style={{ textAlign: 'center', color: '#64748B', marginBottom: 24, lineHeight: 22, fontSize: 15 }}>
+              We've sent a verification link to{"\n"}
+              <Text style={{ fontWeight: '700', color: '#0EA5E9' }}>{formData.email}</Text>.{"\n"}
+              Please click the link in your email to continue.
+            </Text>
+            
+            <TouchableOpacity 
+              style={[styles.heroButton, { width: '100%', marginBottom: 12 }]} 
+              onPress={checkVerificationStatus}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.heroButtonText}>I've Verified My Email</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                setVerifyModalVisible(false);
+                navigation.navigate("Login");
+              }}
+              style={{ alignSelf: 'center', padding: 12 }}
+            >
+              <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>I'll verify later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </KeyboardAvoidingView>
   </SafeAreaView>
