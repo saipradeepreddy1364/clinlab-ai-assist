@@ -73,12 +73,16 @@ const OrgDashboard = () => {
       if (p) setProfile(p);
 
       // 4. Check for Pending Approvals
-      const { count } = await supabase
+      console.log("OrgDashboard: Checking pending approvals for Org ID:", user.id);
+      const { count, error: pendingError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('org_id', user.id)
         .eq('role', 'doctor')
         .eq('status', 'pending');
+      
+      if (pendingError) console.error("OrgDashboard: Pending Query Error:", pendingError);
+      console.log("OrgDashboard: Found pending doctors:", count);
       
       setPendingCount(count || 0);
 
@@ -262,6 +266,14 @@ const OrgDashboard = () => {
             <Text style={styles.analyticsButtonText}>Detailed Reports</Text>
           </TouchableOpacity>
         </TouchableOpacity>
+
+        {/* Diagnostic Footer (Temporary for debugging) */}
+        <View style={{ marginTop: 20, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: '#E2E8F0' }}>
+          <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: 'bold', marginBottom: 4 }}>DEBUG CONSOLE</Text>
+          <Text style={{ fontSize: 11, color: '#64748B' }}>Your Org ID: {profile?.id || "Loading..."}</Text>
+          <Text style={{ fontSize: 11, color: '#64748B' }}>Pending Status: {pendingCount} found</Text>
+          <Text style={{ fontSize: 11, color: '#64748B' }}>Total Staff Found: {doctors.length}</Text>
+        </View>
       </View>
     </AppLayout>
   );
