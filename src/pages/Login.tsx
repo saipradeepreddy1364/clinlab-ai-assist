@@ -41,13 +41,21 @@ const Login = () => {
       if (error) throw error;
       
       if (data.user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle();
         
-        if (profile?.role === 'organization') {
+        if (profileError) throw profileError;
+
+        if (!profile) {
+          Alert.alert("Profile Missing", "Your authentication is valid, but we couldn't find your clinical profile. Please contact support.");
+          setLoading(false);
+          return;
+        }
+        
+        if (profile.role === 'organization') {
           navigation.navigate("OrgDashboard");
         } else {
           navigation.navigate("Dashboard");

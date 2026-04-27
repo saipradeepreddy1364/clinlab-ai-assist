@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, SafeAreaView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Stethoscope, Loader2, ChevronDown } from "lucide-react-native";
+import { Stethoscope, Loader2, ChevronDown, Search } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
 const Signup = () => {
@@ -62,10 +62,11 @@ const Signup = () => {
 
     const timer = setTimeout(async () => {
       setIsSearching(true);
+      console.log("Signup: Searching web for:", formData.name);
       // Simulating a Web/Google search for official hospital names
       setTimeout(() => {
         const query = formData.name.toLowerCase();
-        const mockWebResults = [
+        const allPossibleResults = [
           "City General Hospital",
           "Grace Medical Center",
           "Advanced Dental Care",
@@ -73,11 +74,19 @@ const Signup = () => {
           "National Institute of Dentistry",
           "Metropolitan Health Clinic",
           "Smile Design Studio",
-        ].filter(name => name.toLowerCase().includes(query));
+          "Apollo Hospitals",
+          "Max Healthcare",
+          "Fortis Hospital",
+          "Clinical Lab & Research Center",
+          "Global Dental Care",
+          "Elite Eye & Dental Clinic",
+        ];
         
-        setGoogleResults(mockWebResults);
+        const filtered = allPossibleResults.filter(name => name.toLowerCase().includes(query));
+        console.log("Signup: Web search found:", filtered.length, "results");
+        setGoogleResults(filtered.length > 0 ? filtered : ["NO_RESULTS"]);
         setIsSearching(false);
-      }, 800);
+      }, 1000);
     }, 500);
 
     return () => clearTimeout(timer);
@@ -138,13 +147,16 @@ const Signup = () => {
             }
           ]);
 
-        const successMessage = authType === "organization" 
-          ? "Your organization account has been created. Redirecting to your dashboard..." 
-          : "Your clinical profile has been created. Redirecting to approval status...";
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          // If the profile row failed, we should know why
+          Alert.alert("Profile Error", `Account created but profile failed: ${profileError.message}`);
+          return;
+        }
 
         Alert.alert(
           "Registration Successful",
-          successMessage,
+          authType === "organization" ? "Your organization is now registered!" : "Your application has been submitted to your organization.",
           [{ text: "OK", onPress: () => navigation.replace(authType === "organization" ? "OrgDashboard" : "Dashboard") }]
         );
       }
@@ -156,13 +168,19 @@ const Signup = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-      <ScrollView 
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
-        showsVerticalScrollIndicator={true}
-        keyboardShouldPersistTaps="always"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 1, paddingBottom: 120 }]}
+          showsVerticalScrollIndicator={true}
+          keyboardShouldPersistTaps="always"
+          nestedScrollEnabled={true}
+        >
         <View style={styles.brand}>
           <View style={styles.logoBox}>
             <Stethoscope size={20} color="#FFFFFF" />
@@ -212,19 +230,25 @@ const Signup = () => {
             
             {authType === "organization" && googleResults.length > 0 && (
               <View style={styles.inlineDropdown}>
-                <Text style={styles.dropdownLabel}>Suggested Official Names (from Web)</Text>
-                {googleResults.map((res, i) => (
-                  <TouchableOpacity 
-                    key={i} 
-                    style={styles.inlineOption}
-                    onPress={() => {
-                      setFormData({ ...formData, name: res });
-                      setGoogleResults([]);
-                    }}
-                  >
-                    <Text style={styles.inlineOptionText}>{res}</Text>
-                  </TouchableOpacity>
-                ))}
+                <Text style={styles.dropdownLabel}>Suggested Official Names (Web Search)</Text>
+                {googleResults[0] === "NO_RESULTS" ? (
+                  <View style={styles.inlineOption}>
+                    <Text style={[styles.inlineOptionText, { color: '#94A3B8' }]}>No official names found. You can keep typing yours.</Text>
+                  </View>
+                ) : (
+                  googleResults.map((res, i) => (
+                    <TouchableOpacity 
+                      key={i} 
+                      style={styles.inlineOption}
+                      onPress={() => {
+                        setFormData({ ...formData, name: res });
+                        setGoogleResults([]);
+                      }}
+                    >
+                      <Text style={styles.inlineOptionText}>{res}</Text>
+                    </TouchableOpacity>
+                  ))
+                )}
               </View>
             )}
           </View>
@@ -352,16 +376,20 @@ const Signup = () => {
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setOrgModalVisible(false)}>
           <View style={styles.modalContent}>
             <Text style={styles.modalHeader}>Registered Organizations</Text>
+            <View style={styles.diagBox}>
+              <Text style={styles.diagText}>Database Status: {organizations.length > 0 ? "Connected" : "Searching..."}</Text>
+              <Text style={styles.diagText}>Registered Orgs Found: {organizations.length}</Text>
+            </View>
             <TouchableOpacity 
               style={styles.refreshBtn} 
               onPress={() => {
-                // Trigger refresh logic
-                supabase.from('profiles').select('id, full_name').eq('role', 'organization').then(({data}) => {
+                supabase.from('profiles').select('id, full_name').eq('role', 'organization').then(({data, error}) => {
+                  if(error) Alert.alert("Error", error.message);
                   if(data) setOrganizations(data);
                 });
               }}
             >
-              <Text style={styles.refreshBtnText}>Refresh List from Database</Text>
+              <Text style={styles.refreshBtnText}>Refresh from Supabase</Text>
             </TouchableOpacity>
             <ScrollView style={{ maxHeight: 400 }}>
               {organizations.length > 0 ? (
@@ -387,7 +415,9 @@ const Signup = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -633,6 +663,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0F172A",
     fontWeight: "500",
+  },
+  diagBox: {
+    backgroundColor: "#F1F5F9",
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  diagText: {
+    fontSize: 11,
+    color: "#64748B",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });
 
