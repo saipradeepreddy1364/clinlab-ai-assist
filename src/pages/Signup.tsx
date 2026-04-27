@@ -72,112 +72,37 @@ const Signup = () => {
     }
 
     const timer = setTimeout(async () => {
+      if (formData.name.length < 3) {
+        setGoogleResults([]);
+        return;
+      }
+
       setIsSearching(true);
-      console.log("Signup: Searching web for:", formData.name);
-      // Simulating a Web/Google search for official hospital names
-      setTimeout(() => {
-        const query = formData.name.toLowerCase();
-        const allPossibleResults = [
-          "Saveetha Dental College & Hospital",
-          "Saveetha Medical Center",
-          "Apollo Hospitals & Heart Institute",
-          "Apollo Dental Specialty Clinic",
-          "Max Healthcare & Super Specialty",
-          "Fortis Memorial Research Institute",
-          "Manipal Hospital - Multi Specialty",
-          "Christian Medical College (CMC) Vellore",
-          "All India Institute of Medical Sciences (AIIMS)",
-          "Medanta - The Medicity",
-          "Rainbow Children's Hospital",
-          "Cloudnine Hospital for Women & Child",
-          "Vasan Eye Care & Dental Center",
-          "Dr. Agarwal's Eye Hospital",
-          "Partha Dental, Skin & Hair Clinic",
-          "Clove Dental - Network of Clinics",
-          "Sabka Dentist - Affordable Dental Care",
-          "Dentys - Dental Excellence",
-          "Orthodontic Center of Excellence",
-          "City General Hospital & Trauma Center",
-          "Grace Medical Center",
-          "Advanced Dental & Aesthetic Studio",
-          "Sunrise Dental & Implant Hub",
-          "National Institute of Dentistry",
-          "Metropolitan Health & Wellness Clinic",
-          "Smile Design Dental Studio",
-          "Global Dental & Maxillofacial Care",
-          "Elite Eye, Dental & ENT Clinic",
-          "Care & Cure Multispecialty Dental Hub",
-          "Perfect Smile Dental & Orthodontic Clinic",
-          "Healthy Roots Dental & Implant Center",
-          "The Orthodontic & Pediatric Center",
-          "Lifeline Medical & Research Center",
-          "Sterling Hospital & Diagnostic Center",
-          "KIMS - Kerala Institute of Medical Sciences",
-          "Ruby Hall Clinic Pune",
-          "Aster CMI Hospital Bangalore",
-          "Gleneagles Global Health City Chennai",
-          "Naranyana Health (NH) Hospital",
-          "Wockhardt Hospital - Global Heart",
-          "Nanavati Super Speciality Hospital",
-          "Lilavati Hospital & Research Centre",
-          "Tata Memorial Hospital Mumbai",
-          "Jaslok Hospital & Research Centre",
-          "Breach Candy Hospital Trust",
-          "Kokilaben Dhirubhai Ambani Hospital",
-          "Sir H. N. Reliance Foundation Hospital",
-          "SevenHills Hospital",
-          "Holy Family Hospital & Research Center",
-          "St. John's Medical College & Hospital",
-          "Thyrocare Technologies Limited",
-          "Dr Lal PathLabs - Diagnostic Center",
-          "Metropolis Healthcare Lab",
-          "SRL Diagnostics - Clinical Lab",
-          "Suburban Diagnostics Center",
-          "Medall Healthcare Diagnostic",
-          "Vijaya Diagnostic Center",
-          "Lucid Medical Diagnostics",
-          "Hitech Diagnostic Centre",
-          "Anderson Diagnostic & Labs",
-          "Bharat Scans & Diagnostics",
-          "Aarthi Scans & Labs",
-          "Mediscan Systems - Imaging",
-          "Precision Diagnostics & Research",
-          "Focus Medical Center",
-          "Nova IVF Fertility Center",
-          "Indira IVF Clinic",
-          "ART Fertility Clinics",
-          "Oasis Fertility Center",
-          "Motherhood Hospitals",
-          "Ankur Hospital - Mother & Child",
-          "Surya Hospitals - Pediatric Care",
-          "Lotus Children's Hospital",
-          "Kanchi Kamakoti Childs Trust Hospital",
-          "Sankara Nethralaya - Eye Care",
-          "L V Prasad Eye Institute (LVPEI)",
-          "Aravind Eye Hospital",
-          "Narayana Nethralaya",
-          "Chaithanya Eye Hospital",
-          "Minto Eye Hospital",
-          "Regional Institute of Ophthalmology",
-          "Dental One Specialty Clinic",
-          "Dentistree - Multi Specialty Dental",
-          "Acharya Dental Clinic",
-          "The Dental Studio - Implants",
-          "Root Canal Foundation",
-          "Dental Roots - Advanced Care",
-          "Cosmozone Dental Clinic",
-          "Face n Smile Dental Clinic",
-          "Aesthetic Dental Solutions",
-        ];
+      console.log("Signup: Live searching global directory for:", formData.name);
+      
+      try {
+        // Using Photon (OpenStreetMap) API - 100% Free & Global
+        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(formData.name)}&limit=8&osm_tag=amenity:hospital`);
+        const data = await response.json();
         
-        const filtered = allPossibleResults.filter(name => 
-          name.toLowerCase().includes(query.trim())
-        );
-        console.log("Signup: Web search found:", filtered.length, "results");
-        setGoogleResults(filtered.length > 0 ? filtered : ["NO_RESULTS"]);
+        if (data.features && data.features.length > 0) {
+          const results = data.features.map((f: any) => {
+            const name = f.properties.name || f.properties.street || "Clinic";
+            const city = f.properties.city || f.properties.state || "";
+            return city ? `${name} (${city})` : name;
+          });
+          setGoogleResults(results);
+        } else {
+          setGoogleResults(["NO_RESULTS"]);
+        }
+      } catch (error) {
+        console.error("Live Search Error:", error);
+        // Fallback to a few common ones if API fails
+        setGoogleResults(["NO_RESULTS"]);
+      } finally {
         setIsSearching(false);
-      }, 1000);
-    }, 500);
+      }
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [formData.name, authType]);
