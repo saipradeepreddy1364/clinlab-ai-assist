@@ -156,13 +156,10 @@ const Signup = () => {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
-    >
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <ScrollView 
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="always"
       >
@@ -390,7 +387,7 @@ const Signup = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -491,41 +488,46 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   inputWrapper: {
-    flex: 1,
     position: 'relative',
+    width: '100%',
   },
   inputLoader: {
     position: 'absolute',
     right: 12,
     top: 12,
+    zIndex: 10,
   },
   dropdownLabel: {
     fontSize: 10,
     fontWeight: "700",
     color: "#64748B",
-    padding: 6,
+    padding: 8,
     backgroundColor: "#F8FAFC",
     textTransform: "uppercase",
   },
   inlineDropdown: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 12,
-    marginTop: 4,
-    maxHeight: 180,
+    maxHeight: 200,
     overflow: "hidden",
-    elevation: 4,
+    elevation: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    zIndex: 1000,
+    zIndex: 9999,
   },
   inlineOption: {
-    padding: 10,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
+    backgroundColor: "#FFFFFF",
   },
   inlineOptionText: {
     fontSize: 14,
