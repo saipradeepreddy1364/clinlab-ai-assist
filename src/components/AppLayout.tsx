@@ -156,7 +156,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       if (session) {
         checkUser();
       } else {
-        setRole("doctor");
+        setRole(null);
         setHasNewNotifications(false);
       }
     });
@@ -168,7 +168,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     };
   }, [navigation]);
 
-  const activeTabs = role === "loading" ? [] : (role === "organization" ? orgTabs : doctorTabs);
+  const activeTabs = (!role || role === "loading") ? [] : (role === "organization" ? orgTabs : doctorTabs);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
