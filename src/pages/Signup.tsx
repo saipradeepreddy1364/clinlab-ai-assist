@@ -206,12 +206,7 @@ const Signup = () => {
           console.log("Signup: Profile synced successfully!");
         }
 
-        // Add explicit confirmation alert for doctors
         if (authType === "doctor") {
-          showAlert(
-            "Application Sent", 
-            `Your request has been sent to ${formData.organization.name}. Your account is now pending approval.`
-          );
           // Redirect doctors immediately to Dashboard
           navigation.replace("Dashboard");
         } else {

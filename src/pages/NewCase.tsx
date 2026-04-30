@@ -190,9 +190,7 @@ const NewCase = () => {
           </View>
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.draftButton}>
-              <Text style={styles.draftButtonText}>Draft</Text>
-            </TouchableOpacity>
+
             <TouchableOpacity 
               style={[styles.submitButton, loading && styles.buttonDisabled]} 
               onPress={handleSubmit}

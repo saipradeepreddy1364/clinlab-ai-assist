@@ -143,7 +143,7 @@ const Patients = () => {
             filteredCases.map((p) => (
               <TouchableOpacity 
                 key={p.id} 
-                onPress={() => navigation.navigate("Patients", { screen: "PatientDetail", params: { id: p.id } })}
+                onPress={() => navigation.navigate("PatientDetail", { id: p.id })}
                 style={styles.caseCard}
               >
                 <View
@@ -165,7 +165,7 @@ const Patients = () => {
                   
                   {fileCounts[p.patient_name] && (
                     <TouchableOpacity 
-                      onPress={() => navigation.navigate("Uploads", { search: p.patient_name })}
+                      onPress={() => navigation.navigate("PatientDetail", { id: p.id })}
                       style={styles.reportsLink}
                     >
                       <FileText size={12} color="#0EA5E9" />

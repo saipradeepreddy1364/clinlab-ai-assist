@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Platform, Alert } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import {
   Activity,
   ClipboardList,
@@ -42,10 +42,21 @@ const OrgDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // 2. Fetch Doctors in Org FIRST so we can map them
+      const { data: profileList } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('org_id', user.id)
+        .eq('role', 'doctor');
+      
+      if (profileList) {
+        setDoctors(profileList);
+      }
 
       // 1. Fetch Stats
       const { data: cases, error: caseError } = await supabase
@@ -60,19 +71,16 @@ const OrgDashboard = () => {
           checkup: cases.filter(c => c.status === 'checkup').length,
           totalDoctors: new Set(cases.map(c => c.doctor_id)).size,
         });
-        setRecentCases(cases.slice(0, 5));
+        
+        // Map doctor names to recent cases
+        const mappedRecentCases = cases.slice(0, 5).map(c => {
+          const doctorName = profileList?.find(d => d.id === c.doctor_id)?.full_name || "Unknown Doctor";
+          return { ...c, doctor_name: doctorName };
+        });
+        setRecentCases(mappedRecentCases);
       }
 
-      // 2. Fetch Doctors in Org
-      const { data: profileList } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('org_id', user.id)
-        .eq('role', 'doctor');
-      
-      if (profileList) {
-        setDoctors(profileList);
-      }
+
 
       // 3. Fetch Org Profile
       const { data: p } = await supabase
@@ -101,7 +109,7 @@ const OrgDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const scanAllDoctors = async () => {
     const { data, count, error } = await supabase
@@ -116,9 +124,13 @@ const OrgDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
+  useEffect(() => {
     // Add Real-time subscription for Pending Approvals
     const channel = supabase
       .channel('org-dashboard-updates')
@@ -192,21 +204,30 @@ const OrgDashboard = () => {
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { borderLeftColor: "#0EA5E9" }]}>
+          <TouchableOpacity 
+            style={[styles.statCard, { borderLeftColor: "#0EA5E9" }]}
+            onPress={() => navigation.navigate("OrgCases")}
+          >
             <Activity size={20} color="#0EA5E9" />
             <Text style={styles.statValue}>{stats.active}</Text>
             <Text style={styles.statLabel}>Active Cases</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: "#8B5CF6" }]}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.statCard, { borderLeftColor: "#8B5CF6" }]}
+            onPress={() => navigation.navigate("OrgCases")}
+          >
             <ClipboardList size={20} color="#8B5CF6" />
             <Text style={styles.statValue}>{stats.lab}</Text>
             <Text style={styles.statLabel}>Lab Requests</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: "#10B981" }]}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.statCard, { borderLeftColor: "#10B981" }]}
+            onPress={() => navigation.navigate("OrgCases")}
+          >
             <Stethoscope size={20} color="#10B981" />
             <Text style={styles.statValue}>{stats.checkup}</Text>
             <Text style={styles.statLabel}>Checkups</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Doctors Performance */}

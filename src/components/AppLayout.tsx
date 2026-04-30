@@ -67,7 +67,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const route = useRoute();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [role, setRole] = useState<string>("doctor"); // Default to doctor instead of loading
+  const [role, setRole] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   
   useNotifications();

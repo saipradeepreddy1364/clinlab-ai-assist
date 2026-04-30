@@ -9,22 +9,58 @@ import {
   ChevronRight,
   Target
 } from "lucide-react-native";
-import AppLayout from "@/components/AppLayout";
+import { supabase } from "@/lib/supabase";
 
 const Insights = () => {
-  const [timeframe, setTimeframe] = useState("This Month");
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState({
+    total: 0,
+    active: 0,
+    completed: 0,
+    urgent: 0
+  });
+
+  React.useEffect(() => {
+    const fetchMetrics = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      const role = profile?.role || 'doctor';
+      
+      let query = supabase.from('cases').select('status, is_urgent');
+      if (role === 'organization') {
+        query = query.eq('org_id', user.id);
+      } else {
+        query = query.eq('doctor_id', user.id);
+      }
+
+      const { data } = await query;
+      
+      if (data) {
+        setMetrics({
+          total: data.length,
+          active: data.filter(c => c.status === 'active' || c.status === 'in-progress').length,
+          completed: data.filter(c => c.status === 'completed').length,
+          urgent: data.filter(c => c.is_urgent).length
+        });
+      }
+      setLoading(false);
+    };
+
+    fetchMetrics();
+  }, []);
 
   const stats = [
-    { label: "Cases Completed", value: "124", change: "+12%", icon: Activity, color: "#0EA5E9" },
-    { label: "AI Suggestions Used", value: "89", change: "+24%", icon: Sparkles, color: "#8B5CF6" },
-    { label: "Avg. Time Saved", value: "2.5h", change: "+5%", icon: Clock, color: "#10B981" },
-    { label: "Diagnosis Accuracy", value: "96%", change: "+2%", icon: Target, color: "#F59E0B" },
-  ];
-
-  const recentInsights = [
-    { title: "Increased Endodontic Cases", desc: "You've seen a 15% increase in RCT cases compared to last month." },
-    { title: "Optimal Material Usage", desc: "Using AI material suggestions has reduced your inventory waste by 8%." },
-    { title: "Faster Consultations", desc: "Voice-guided notes are saving you an average of 4 mins per patient." },
+    { label: "Total Cases", value: metrics.total.toString(), icon: Activity, color: "#0EA5E9" },
+    { label: "Active Cases", value: metrics.active.toString(), icon: Clock, color: "#8B5CF6" },
+    { label: "Completed Cases", value: metrics.completed.toString(), icon: Target, color: "#10B981" },
+    { label: "Urgent Cases", value: metrics.urgent.toString(), icon: Sparkles, color: "#EF4444" },
   ];
 
   return (
@@ -37,10 +73,6 @@ const Insights = () => {
             <Text style={styles.subtitle}>Your practice performance & AI impact</Text>
           </View>
           
-          <TouchableOpacity style={styles.timeframeButton}>
-            <Text style={styles.timeframeText}>{timeframe}</Text>
-            <ChevronDown size={14} color="#64748B" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.statsGrid}>
@@ -49,14 +81,8 @@ const Insights = () => {
               <View style={[styles.iconBox, { backgroundColor: `${stat.color}15` }]}>
                 <stat.icon size={20} color={stat.color} />
               </View>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <View style={styles.statFooter}>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-                <View style={styles.changeBadge}>
-                  <TrendingUp size={10} color="#10B981" />
-                  <Text style={styles.changeText}>{stat.change}</Text>
-                </View>
-              </View>
+              <Text style={styles.statValue}>{loading ? "-" : stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
             </View>
           ))}
         </View>
@@ -77,19 +103,6 @@ const Insights = () => {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Smart Observations</Text>
-        <View style={styles.insightsList}>
-          {recentInsights.map((insight, i) => (
-            <View key={i} style={styles.insightCard}>
-              <View style={styles.insightIconBox}>
-                <Sparkles size={16} color="#8B5CF6" />
-              </View>
-              <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>{insight.title}</Text>
-                <Text style={styles.insightDesc}>{insight.desc}</Text>
-              </View>
-            </View>
-          ))}
         </View>
 
       </ScrollView>
@@ -97,12 +110,7 @@ const Insights = () => {
   );
 };
 
-// Add a quick ChevronDown component since we didn't import it
-const ChevronDown = ({ size, color }: { size: number, color: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="6 9 12 15 18 9"></polyline>
-  </svg>
-);
+
 
 const styles = StyleSheet.create({
   container: {
@@ -128,22 +136,7 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 4,
   },
-  timeframeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  timeframeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
+
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -171,30 +164,12 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     marginBottom: 4,
   },
-  statFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
   statLabel: {
     fontSize: 12,
     color: "#64748B",
-    flex: 1,
+    marginTop: 4,
   },
-  changeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  changeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#10B981",
-  },
+
   heroCard: {
     backgroundColor: "#0EA5E9",
     borderRadius: 24,
@@ -237,47 +212,7 @@ const styles = StyleSheet.create({
     bottom: -20,
     zIndex: 1,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginTop: 8,
-    marginBottom: -8,
-  },
-  insightsList: {
-    gap: 12,
-  },
-  insightCard: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(226, 232, 240, 0.6)",
-    gap: 12,
-  },
-  insightIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: "rgba(139, 92, 246, 0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  insightContent: {
-    flex: 1,
-  },
-  insightTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 4,
-  },
-  insightDesc: {
-    fontSize: 12,
-    color: "#64748B",
-    lineHeight: 18,
-  },
+
 });
 
 export default Insights;

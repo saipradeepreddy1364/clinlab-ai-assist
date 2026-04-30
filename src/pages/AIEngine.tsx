@@ -85,14 +85,9 @@ const AIEngine = () => {
   const [loading, setLoading] = useState(false);
   const [originalText, setOriginalText] = useState("");
 
-  const { isListening, startListening, stopListening, recognizedText, browserSupportsSpeechRecognition } = useVoiceInput();
-
-  useEffect(() => {
-    if (isListening && recognizedText) {
-      setInput(originalText ? `${originalText} ${recognizedText}` : recognizedText);
-    }
-  }, [recognizedText, isListening]);
-
+  const { isListening, startListening, stopListening, browserSupportsSpeechRecognition } = useVoiceInput((text) => {
+    setInput(originalText ? `${originalText} ${text}` : text);
+  });
   const handleToggleVoice = () => {
     if (isListening) {
       stopListening();
