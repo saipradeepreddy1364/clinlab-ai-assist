@@ -121,35 +121,29 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
     checkUser();
 
-    // Global listener for pending approvals (for organizations)
-    const setupRealtime = async () => {
+    let pollInterval: ReturnType<typeof setInterval>;
+
+    // Use polling for pending approvals since Supabase Replication may not be enabled
+    const setupPolling = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const channel = supabase
-        .channel('global-approvals')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'profiles'
-        }, async (payload) => {
-          // Re-check count on any profile change
-          const { count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('org_id', session.user.id)
-            .eq('role', 'doctor')
-            .eq('status', 'pending');
-          
-          setHasNewNotifications(count ? count > 0 : false);
-        })
-        .subscribe();
-      
-      return channel;
+      const checkPending = async () => {
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('org_id', session.user.id)
+          .eq('role', 'doctor')
+          .eq('status', 'pending');
+        
+        setHasNewNotifications(count ? count > 0 : false);
+      };
+
+      // Poll every 10 seconds
+      pollInterval = setInterval(checkPending, 10000);
     };
 
-    let globalChannel: any;
-    setupRealtime().then(ch => globalChannel = ch);
+    setupPolling();
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("AppLayout: Auth state change:", event);
@@ -164,7 +158,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       if (authListener?.subscription) authListener.subscription.unsubscribe();
-      if (globalChannel) supabase.removeChannel(globalChannel);
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [navigation]);
 

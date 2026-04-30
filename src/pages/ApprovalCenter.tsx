@@ -47,15 +47,28 @@ const ApprovalCenter = () => {
   }, []);
 
   const handleAction = async (doctorId: string, status: 'approved' | 'rejected' | 'pending') => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ status })
-      .eq('id', doctorId);
+    if (status === 'rejected') {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', doctorId);
 
-    if (error) {
-      Alert.alert("Error", error.message);
+      if (error) {
+        Alert.alert("Error", error.message);
+      } else {
+        fetchDoctors();
+      }
     } else {
-      fetchDoctors();
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status })
+        .eq('id', doctorId);
+
+      if (error) {
+        Alert.alert("Error", error.message);
+      } else {
+        fetchDoctors();
+      }
     }
   };
 
