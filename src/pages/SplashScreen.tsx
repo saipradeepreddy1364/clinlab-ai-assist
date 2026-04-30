@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { Stethoscope } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
@@ -9,7 +10,6 @@ const SplashScreen = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const guestMode = await AsyncStorage.getItem("guestMode");
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
@@ -28,8 +28,6 @@ const SplashScreen = () => {
         } else {
           navigation.replace("Dashboard");
         }
-      } else if (guestMode === "true") {
-        navigation.replace("Dashboard");
       } else {
         navigation.replace("Login");
       }
@@ -41,8 +39,11 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>ClinLab</Text>
-      <ActivityIndicator size="large" color="#0EA5E9" style={styles.loader} />
+      <View style={styles.logoCircle}>
+        <Stethoscope size={48} color="#FFFFFF" />
+      </View>
+      <Text style={styles.logoText}>ClinLab</Text>
+      <ActivityIndicator size="small" color="#0EA5E9" style={styles.loader} />
       <Text style={styles.tagline}>AI Dental Clinical Assistant</Text>
     </View>
   );
@@ -51,24 +52,41 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
   },
-  logo: {
-    fontSize: 42,
-    fontWeight: "700",
-    color: "#0EA5E9",
-    marginBottom: 20,
+  logoCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 32,
+    backgroundColor: "#0EA5E9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  logoText: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   loader: {
-    marginBottom: 20,
+    marginVertical: 16,
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#64748B",
-    fontWeight: "500",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
 });
 

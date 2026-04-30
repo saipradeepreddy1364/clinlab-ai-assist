@@ -34,24 +34,13 @@ const Dashboard = () => {
     checkup: 0,
   });
   const [recentCases, setRecentCases] = useState<any[]>([]);
-  const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<"doctor" | "organization" | "loading">("loading");
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
-      const guestValue = await AsyncStorage.getItem("guestMode");
-      const guest = guestValue === "true";
-      setIsGuest(guest);
-
-      if (guest) {
-        setUserName("Guest");
-        setStats({ active: 0, lab: 0, checkup: 0 });
-        setRecentCases([]);
-        setLoading(false);
-        return;
-      }
+      // Removed guest mode logic
 
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
@@ -138,7 +127,7 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  if (loading || (role === 'loading' && !isGuest)) {
+  if (loading || role === 'loading') {
     return (
       <AppLayout>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
@@ -159,38 +148,24 @@ const Dashboard = () => {
               <Text style={styles.todayText}>Today</Text>
             </View>
             <Text style={styles.greetingText}>
-              {greeting}, {isGuest ? "Guest" : `Dr. ${userName}`}
+              {greeting}, Dr. {userName}
             </Text>
-            {!isGuest && (
-              <Text style={styles.statsSummary}>
-                {stats.active} active cases · {stats.lab} lab requests pending
-              </Text>
-            )}
+            <Text style={styles.statsSummary}>
+              {stats.active} active cases · {stats.lab} lab requests pending
+            </Text>
             <View style={styles.heroActions}>
-              {!isGuest && role !== 'organization' && (
-                <TouchableOpacity 
-                  onPress={() => navigation.navigate("NewCase")}
-                  style={styles.heroButton}
-                >
-                  <FilePlus2 size={14} color="#FFFFFF" />
-                  <Text style={styles.heroButtonText}>New case</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity 
                 onPress={() => navigation.navigate("AIEngine")}
                 style={styles.heroButton}
               >
                 <Sparkles size={14} color="#FFFFFF" />
-                <Text style={styles.heroButtonText}>
-                  {isGuest ? "AI Clinical Guide" : "Ask AI"}
-                </Text>
+                <Text style={styles.heroButtonText}>AI Clinical Guide</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {!isGuest && (
-          <View style={styles.mainContent}>
+        <View style={styles.mainContent}>
             {/* Approval Alert for Organizations */}
             {role === "organization" && pendingCount > 0 && (
               <TouchableOpacity 
@@ -290,10 +265,9 @@ const Dashboard = () => {
                     </TouchableOpacity>
                   </View>
                 )}
-              </View>
             </View>
           </View>
-        )}
+        </View>
       </View>
     </AppLayout>
   );

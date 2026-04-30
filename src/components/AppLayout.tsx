@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   LayoutDashboard,
@@ -65,7 +66,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const route = useRoute();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [role, setRole] = useState<string>("loading");
+  const [role, setRole] = useState<string>("doctor"); // Default to doctor instead of loading
+  const insets = useSafeAreaInsets();
   
   useNotifications();
 
@@ -73,13 +75,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     let authListener: any;
 
     const checkUser = async () => {
-      const guestValue = await AsyncStorage.getItem("guestMode");
-      const isGuest = guestValue === "true";
-      
-      if (isGuest) {
-        setRole("guest");
-        return;
-      }
+      // Remove Guest Mode logic
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -159,7 +155,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       if (session) {
         checkUser();
       } else {
-        setRole("guest");
+        setRole("doctor");
         setHasNewNotifications(false);
       }
     });
@@ -174,8 +170,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const activeTabs = role === "loading" ? [] : (role === "organization" ? orgTabs : doctorTabs);
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem("guestMode");
-    await supabase.auth.signOut();
     navigation.navigate("Login");
   };
 
@@ -184,7 +178,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const isDark = theme === "dark";
 
   return (
-    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+    <View style={[
+      styles.container, 
+      isDark && styles.containerDark,
+      { paddingTop: insets.top } // Manually handle top inset
+    ]}>
       {/* App header */}
       <View style={[styles.header, isDark && styles.headerDark]}>
         <View style={styles.headerLeft}>
@@ -194,11 +192,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={styles.brandText}>ClinLab</Text>
-              {role !== 'loading' && (
-                <View style={[styles.roleBadge, role === 'organization' ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
-                  <Text style={styles.roleBadgeText}>{role}</Text>
-                </View>
-              )}
+              <View style={[styles.roleBadge, role === 'organization' ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
+                <Text style={styles.roleBadgeText}>{role}</Text>
+              </View>
             </View>
             <Text style={[styles.headerTitle, isDark && styles.textWhite]}>{title}</Text>
           </View>
@@ -233,7 +229,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       />
 
       {/* Bottom tab bar */}
-      <View style={[styles.tabBar, isDark && styles.tabBarDark]}>
+      <View style={[
+        styles.tabBar, 
+        isDark && styles.tabBarDark,
+        { paddingBottom: insets.bottom || 16 } // Ensure bottom visibility with safe area
+      ]}>
         {activeTabs.map((tab) => {
           const isActive = route.name === tab.name;
           if (tab.primary) {
@@ -263,7 +263,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           );
         })}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -369,12 +369,13 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   tabBar: {
-    height: 70,
+    height: Platform.OS === 'ios' ? 88 : 70, // Adjust for iOS home indicator
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     flexDirection: "row",
     paddingHorizontal: 8,
     borderTopWidth: 1,
     borderTopColor: "rgba(226, 232, 240, 0.6)",
+    zIndex: 100, // Ensure it's above content
   },
   tabBarDark: {
     backgroundColor: "rgba(15, 23, 42, 0.95)",

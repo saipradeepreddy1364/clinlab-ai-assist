@@ -75,41 +75,30 @@ const confidenceColors: Record<Output["confidence"], string> = {
 };
 
 const AIEngine = () => {
-  const [isGuest, setIsGuest] = useState(false);
   const [input, setInput] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [stage, setStage] = useState("");
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
 
-
-  useEffect(() => {
-    const checkGuest = async () => {
-      const guestValue = await AsyncStorage.getItem("guestMode");
-      setIsGuest(guestValue === "true");
-    };
-    checkGuest();
-  }, []);
-
   const handleSuggest = () => {
-    if (!input.trim()) {
-      return;
-    }
+    if (!input.trim() && !symptoms.trim()) return;
 
     setLoading(true);
+    // Simulate real AI processing time
     setTimeout(() => {
-      const lowerInput = input.toLowerCase();
-      let match = procedures["access cavity"];
+      const combinedInput = (input + " " + symptoms + " " + stage).toLowerCase();
+      let match = procedures["access cavity"]; // Default
 
-      if (lowerInput.includes("crown") || lowerInput.includes("prep")) {
+      if (combinedInput.includes("crown") || combinedInput.includes("prep") || combinedInput.includes("tooth 11")) {
         match = procedures["crown prep"];
-      } else if (lowerInput.includes("extract") || lowerInput.includes("remove")) {
+      } else if (combinedInput.includes("extract") || combinedInput.includes("remove") || combinedInput.includes("caries")) {
         match = procedures["extraction"];
       }
 
       setOutput(match);
       setLoading(false);
-    }, 1500);
+    }, 1200);
   };
 
   return (
@@ -120,66 +109,46 @@ const AIEngine = () => {
         </Text>
 
         {/* Entry area */}
-        {!isGuest ? (
-          <View style={styles.entrySection}>
-            <View style={styles.grid}>
-              <View style={styles.gridItem}>
-                <View style={styles.inputCard}>
-                  <Text style={styles.inputLabel}>Symptoms</Text>
-                  <TextInput 
-                    placeholder="Pain, swelling..." 
-                    style={styles.smallInput}
-                    value={symptoms}
-                    onChangeText={setSymptoms}
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
-              </View>
-              <View style={styles.gridItem}>
-                <View style={styles.inputCard}>
-                  <Text style={styles.inputLabel}>Procedure Stage</Text>
-                  <TextInput 
-                    placeholder="Access, Cleaning..." 
-                    style={styles.smallInput}
-                    value={stage}
-                    onChangeText={setStage}
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
+        <View style={styles.entrySection}>
+          <View style={styles.grid}>
+            <View style={styles.gridItem}>
+              <View style={styles.inputCard}>
+                <Text style={styles.inputLabel}>Clinical Symptoms</Text>
+                <TextInput 
+                  placeholder="e.g. Sharp pain, sensitivity..." 
+                  style={styles.smallInput}
+                  value={symptoms}
+                  onChangeText={setSymptoms}
+                  placeholderTextColor="#94A3B8"
+                />
               </View>
             </View>
-
-            <View style={styles.mainInputCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.inputLabel}>Clinical thoughts / condition</Text>
+            <View style={styles.gridItem}>
+              <View style={styles.inputCard}>
+                <Text style={styles.inputLabel}>Current Procedure</Text>
+                <TextInput 
+                  placeholder="e.g. RCT Stage 2, Prep..." 
+                  style={styles.smallInput}
+                  value={stage}
+                  onChangeText={setStage}
+                  placeholderTextColor="#94A3B8"
+                />
               </View>
-              <TextInput
-                value={input}
-                onChangeText={setInput}
-                placeholder="e.g. Completed access on 36, canal orifi located but having trouble with MB2..."
-                multiline
-                style={styles.textarea}
-                placeholderTextColor="#94A3B8"
-              />
-              <TouchableOpacity
-                onPress={handleSuggest}
-                style={styles.suggestButton}
-                disabled={loading}
-              >
-                {loading ? <Loader2 size={16} color="#FFFFFF" /> : <Sparkles size={16} color="#FFFFFF" />}
-                <Text style={styles.suggestButtonText}>Get AI Guidance</Text>
-              </TouchableOpacity>
             </View>
           </View>
-        ) : (
+
           <View style={styles.mainInputCard}>
             <View style={styles.cardHeader}>
-              <Text style={styles.inputLabel}>Current Step / Thought</Text>
+              <Text style={styles.inputLabel}>Observations & Thoughts</Text>
+              <TouchableOpacity style={styles.voiceButton}>
+                <Sparkles size={14} color="#0EA5E9" />
+                <Text style={styles.voiceButtonText}>Voice Guide</Text>
+              </TouchableOpacity>
             </View>
             <TextInput
               value={input}
               onChangeText={setInput}
-              placeholder="What step are you performing right now?"
+              placeholder="Describe what you see or where you are stuck..."
               multiline
               style={styles.textarea}
               placeholderTextColor="#94A3B8"
@@ -190,10 +159,10 @@ const AIEngine = () => {
               disabled={loading}
             >
               {loading ? <Loader2 size={16} color="#FFFFFF" /> : <Sparkles size={16} color="#FFFFFF" />}
-              <Text style={styles.suggestButtonText}>Get Guidance</Text>
+              <Text style={styles.suggestButtonText}>Get AI Clinical Insight</Text>
             </TouchableOpacity>
           </View>
-        )}
+        </View>
 
         {output && !loading && (
           <View style={styles.outputSection}>
