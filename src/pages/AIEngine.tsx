@@ -9,10 +9,13 @@ import {
   FlaskConical,
   ArrowRight,
   Loader2,
+  Mic,
+  MicOff
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
+import { useVoiceInput } from "@/hooks/useVoice";
 
 type Output = {
   diagnosis: string;
@@ -80,6 +83,24 @@ const AIEngine = () => {
   const [stage, setStage] = useState("");
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
+  const [originalText, setOriginalText] = useState("");
+
+  const { isListening, startListening, stopListening, recognizedText, browserSupportsSpeechRecognition } = useVoiceInput();
+
+  useEffect(() => {
+    if (isListening && recognizedText) {
+      setInput(originalText ? `${originalText} ${recognizedText}` : recognizedText);
+    }
+  }, [recognizedText, isListening]);
+
+  const handleToggleVoice = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      setOriginalText(input);
+      startListening();
+    }
+  };
 
   const handleSuggest = () => {
     if (!input.trim() && !symptoms.trim()) return;
@@ -140,10 +161,21 @@ const AIEngine = () => {
           <View style={styles.mainInputCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.inputLabel}>Observations & Thoughts</Text>
-              <TouchableOpacity style={styles.voiceButton}>
-                <Sparkles size={14} color="#0EA5E9" />
-                <Text style={styles.voiceButtonText}>Voice Guide</Text>
-              </TouchableOpacity>
+              {browserSupportsSpeechRecognition && (
+                <TouchableOpacity 
+                  style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
+                  onPress={handleToggleVoice}
+                >
+                  {isListening ? (
+                    <MicOff size={14} color="#EF4444" />
+                  ) : (
+                    <Mic size={14} color="#0EA5E9" />
+                  )}
+                  <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
+                    {isListening ? "Stop Listening" : "Voice Guide"}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             <TextInput
               value={input}

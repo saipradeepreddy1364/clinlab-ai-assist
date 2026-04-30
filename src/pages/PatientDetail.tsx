@@ -11,8 +11,10 @@ import {
   Circle,
   Calendar,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Upload
 } from "lucide-react-native";
+import * as DocumentPicker from "expo-document-picker";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
@@ -31,6 +33,30 @@ const PatientDetail = () => {
   const [patient, setPatient] = useState<any>(null);
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  const fetchFiles = async (doctorId: string, patientName: string) => {
+    const { data: storageFiles } = await supabase.storage
+      .from('clinical-files')
+      .list(doctorId);
+    
+    if (storageFiles) {
+      const matchedFiles = storageFiles.filter(f => {
+        const parts = f.name.split('--');
+        if (parts.length > 1) {
+          const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
+          return pName?.toLowerCase() === patientName.toLowerCase();
+        }
+        return false;
+      }).map(f => ({
+        name: f.name.split('--').slice(1).join('--') || f.name,
+        tag: f.name.split('--')[0]?.split('_')[1]?.replace(/-/g, ' ') || "Other",
+        path: `${doctorId}/${f.name}`,
+        type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : "pdf"
+      }));
+      setFiles(matchedFiles);
+    }
+  };
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -47,26 +73,7 @@ const PatientDetail = () => {
         
         // Fetch files for this patient using the case's doctor_id
         if (caseData.doctor_id) {
-          const { data: storageFiles } = await supabase.storage
-            .from('clinical-files')
-            .list(caseData.doctor_id);
-          
-          if (storageFiles) {
-            const matchedFiles = storageFiles.filter(f => {
-              const parts = f.name.split('--');
-              if (parts.length > 1) {
-                const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
-                return pName?.toLowerCase() === caseData.patient_name.toLowerCase();
-              }
-              return false;
-            }).map(f => ({
-              name: f.name.split('--').slice(1).join('--') || f.name,
-              tag: f.name.split('--')[0]?.split('_')[1]?.replace(/-/g, ' ') || "Other",
-              path: `${caseData.doctor_id}/${f.name}`,
-              type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : "pdf"
-            }));
-            setFiles(matchedFiles);
-          }
+          await fetchFiles(caseData.doctor_id, caseData.patient_name);
         }
       }
       setLoading(false);
@@ -96,6 +103,49 @@ const PatientDetail = () => {
       </AppLayout>
     );
   }
+
+  const handleFileUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      setUploading(true);
+      const file = result.assets[0];
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      const fileExt = file.name.split('.').pop();
+      const sanitizedPatient = patient.patient_name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+      const sanitizedDate = new Date().toISOString().split('T')[0];
+      
+      const fileName = `${sanitizedPatient}_Report_${sanitizedDate}--${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('clinical-files')
+        .upload(filePath, blob, {
+          contentType: file.mimeType || 'application/octet-stream',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      await fetchFiles(user.id, patient.patient_name);
+    } catch (error: any) {
+      console.error("Upload failed:", error.message);
+      alert(error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const renderTimeline = () => (
     <View style={styles.card}>
@@ -173,6 +223,15 @@ const PatientDetail = () => {
         <ClipboardList size={16} color="#8B5CF6" />
         <Text style={styles.cardHeaderTitle}>Lab forms & uploads</Text>
       </View>
+      
+      <TouchableOpacity 
+        style={styles.uploadButton} 
+        onPress={handleFileUpload}
+        disabled={uploading}
+      >
+        {uploading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Upload size={16} color="#FFFFFF" />}
+        <Text style={styles.uploadButtonText}>{uploading ? "Uploading..." : "Upload New File"}</Text>
+      </TouchableOpacity>
       <View style={styles.fileList}>
         {files.length > 0 ? (
           files.map((f) => (
@@ -532,7 +591,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     padding: 20,
     fontStyle: "italic",
-  }
+  },
+  uploadButton: {
+    backgroundColor: "#0EA5E9",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 16,
+  },
+  uploadButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });
 
 export default PatientDetail;

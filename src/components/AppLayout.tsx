@@ -17,6 +17,7 @@ import {
   LogOut,
   LayoutGrid,
   FileSearch,
+  BarChart3,
 } from "lucide-react-native"; // Using native version
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "./ThemeProvider";
@@ -39,7 +40,7 @@ const doctorTabs: Tab[] = [
   { name: "NewCase", label: "New", icon: FilePlus2 },
   { name: "AIEngine", label: "AI", icon: Sparkles, primary: true },
   { name: "Patients", label: "Records", icon: Users },
-  { name: "Uploads", label: "Files", icon: Upload },
+  { name: "Insights", label: "Insights", icon: BarChart3 },
 ];
 
 const orgTabs: Tab[] = [
@@ -57,7 +58,7 @@ const titleMap: Record<string, string> = {
   "Patients": "Patient Records",
   "OrgCases": "Organization Cases",
   "OrgReports": "Patient Reports",
-  "Uploads": "File Uploads",
+  "Insights": "Clinical Insights",
 };
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {

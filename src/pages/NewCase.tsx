@@ -7,6 +7,12 @@ import AppLayout from "@/components/AppLayout";
 
 const symptomOptions = ["Pain", "Swelling", "Sensitivity", "Sinus tract", "Mobility", "Bleeding"];
 
+const formatCaseType = (type: string) => {
+  if (type === 'active') return 'New';
+  if (type === 'lab') return 'Lab (existing case)';
+  return type.charAt(0).toUpperCase() + type.slice(1);
+};
+
 const NewCase = () => {
   const navigation = useNavigation<any>();
   const [symptoms, setSymptoms] = useState<string[]>(["Pain"]);
@@ -21,7 +27,6 @@ const NewCase = () => {
     notes: "",
     case_type: "active",
   });
-  const [caseTypeModalVisible, setCaseTypeModalVisible] = useState(false);
   
   React.useEffect(() => {
     const checkAccess = async () => {
@@ -129,20 +134,6 @@ const NewCase = () => {
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                <Stethoscope size={12} color="#64748B" /> Case Type
-              </Text>
-              <TouchableOpacity 
-                style={styles.selectTrigger}
-                onPress={() => setCaseTypeModalVisible(true)}
-              >
-                <Text style={styles.selectValue}>
-                  {formData.case_type.charAt(0).toUpperCase() + formData.case_type.slice(1)}
-                </Text>
-                <ChevronDown size={16} color="#64748B" />
-              </TouchableOpacity>
-            </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tooth number (FDI)</Text>
@@ -218,39 +209,6 @@ const NewCase = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Case Type Modal */}
-      <Modal
-        visible={caseTypeModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCaseTypeModalVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setCaseTypeModalVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Case Type</Text>
-            {["active", "lab", "checkup"].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={styles.modalOption}
-                onPress={() => {
-                  setFormData({ ...formData, case_type: type });
-                  setCaseTypeModalVisible(false);
-                }}
-              >
-                <Text style={[styles.modalOptionText, formData.case_type === type && styles.modalOptionTextActive]}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </Text>
-                {formData.case_type === type && <Check size={16} color="#0EA5E9" />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* Gender Picker Modal */}
       <Modal

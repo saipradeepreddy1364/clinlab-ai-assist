@@ -151,7 +151,7 @@ const Dashboard = () => {
               {greeting}, Dr. {userName}
             </Text>
             <Text style={styles.statsSummary}>
-              {stats.active} active cases · {stats.lab} lab requests pending
+              {stats.active} new cases · {stats.lab} lab requests pending
             </Text>
             <View style={styles.heroActions}>
               <TouchableOpacity 
@@ -186,7 +186,7 @@ const Dashboard = () => {
             {/* Stats */}
             <View style={styles.statsGrid}>
               {[
-                { label: "Active", value: stats.active, color: "#0EA5E9", icon: Activity },
+                { label: "New", value: stats.active, color: "#0EA5E9", icon: Activity },
                 { label: "Lab", value: stats.lab, color: "#8B5CF6", icon: ClipboardList },
                 { label: "Checkup", value: stats.checkup, color: "#10B981", icon: Stethoscope },
               ].map((s) => (
