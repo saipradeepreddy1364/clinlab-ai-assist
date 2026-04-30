@@ -132,23 +132,15 @@ const OrgDashboard = () => {
   );
 
   useEffect(() => {
-    // Add Real-time subscription for Pending Approvals
-    const channel = supabase
-      .channel('org-dashboard-updates')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'profiles' 
-      }, () => {
-        console.log("OrgDashboard: Detected profile change, refreshing...");
-        fetchData();
-      })
-      .subscribe();
+    // Add polling since Supabase replication might not be enabled
+    const pollInterval = setInterval(() => {
+      fetchData();
+    }, 10000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
-  }, []);
+  }, [fetchData]);
 
 
   if (loading) {

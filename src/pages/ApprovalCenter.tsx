@@ -47,15 +47,27 @@ const ApprovalCenter = () => {
   }, []);
 
   const handleAction = async (doctorId: string, status: 'approved' | 'rejected' | 'pending') => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ status })
-      .eq('id', doctorId);
-
-    if (error) {
-      Alert.alert("Error", error.message);
+    if (status === 'rejected') {
+      const { error } = await supabase.rpc('delete_rejected_user', { target_user_id: doctorId });
+      
+      if (error) {
+        Alert.alert("Delete Error", error.message);
+      } else {
+        // Optimistically remove from state so the UI updates instantly
+        setDoctors(prev => prev.filter(d => d.id !== doctorId));
+        fetchDoctors();
+      }
     } else {
-      fetchDoctors();
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status })
+        .eq('id', doctorId);
+
+      if (error) {
+        Alert.alert("Error", error.message);
+      } else {
+        fetchDoctors();
+      }
     }
   };
 

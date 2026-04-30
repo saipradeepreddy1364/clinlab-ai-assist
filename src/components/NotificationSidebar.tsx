@@ -28,6 +28,8 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
         .order('created_at', { ascending: false })
         .limit(10);
 
+      let newNotifs: Notification[] = [];
+
       if (cases) {
         const mapped: Notification[] = cases.map(c => ({
           id: c.id,
@@ -37,7 +39,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
           time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           read: false
         }));
-        setNotifications(prev => [...prev, ...mapped]);
+        newNotifs = [...newNotifs, ...mapped];
       }
 
       // If Organization, fetch pending doctors
@@ -59,9 +61,11 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
             time: "Just Now",
             read: false
           }));
-          setNotifications(prev => [...doctorAlerts, ...prev]);
+          newNotifs = [...doctorAlerts, ...newNotifs];
         }
       }
+
+      setNotifications(newNotifs);
     };
 
     if (open) {
