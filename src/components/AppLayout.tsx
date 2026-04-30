@@ -170,7 +170,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const activeTabs = role === "loading" ? [] : (role === "organization" ? orgTabs : doctorTabs);
 
   const handleLogout = async () => {
-    navigation.navigate("Login");
+    await supabase.auth.signOut();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
   };
 
   const isHome = route.name === "Dashboard";
