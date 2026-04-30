@@ -52,7 +52,8 @@ const OrgDashboard = () => {
         .from('profiles')
         .select('*')
         .eq('org_id', user.id)
-        .eq('role', 'doctor');
+        .eq('role', 'doctor')
+        .eq('status', 'approved');
       
       if (profileList) {
         setDoctors(profileList);
@@ -230,37 +231,7 @@ const OrgDashboard = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Doctors Performance */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <UserCheck size={18} color="#0F172A" />
-              <Text style={styles.sectionTitle}>Medical Staff</Text>
-            </View>
-            <Text style={styles.badge}>{doctors.length} Active</Text>
-          </View>
-          
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.doctorScroll}>
-            {doctors.map((dr) => (
-              <TouchableOpacity key={dr.id} style={styles.drCard}>
-                <View style={styles.drAvatar}>
-                  <Text style={styles.drAvatarText}>{dr.full_name?.charAt(0)}</Text>
-                </View>
-                <Text style={styles.drName} numberOfLines={1}>{dr.full_name}</Text>
-                <Text style={styles.drSpecialty}>{dr.specialization || "Clinical"}</Text>
-                <View style={styles.drStatus}>
-                  <View style={styles.onlineDot} />
-                  <Text style={styles.statusText}>Online</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-            {doctors.length === 0 && (
-              <View style={styles.emptyDr}>
-                <Text style={styles.emptyText}>No doctors registered yet.</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
+
 
         {/* Recent Organization Activity */}
         <View style={styles.section}>
