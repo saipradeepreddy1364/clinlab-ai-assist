@@ -156,21 +156,37 @@ const AIEngine = () => {
           <View style={styles.mainInputCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.inputLabel}>Observations & Thoughts</Text>
-              {browserSupportsSpeechRecognition && (
-                <TouchableOpacity 
-                  style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
-                  onPress={handleToggleVoice}
-                >
-                  {isListening ? (
-                    <MicOff size={14} color="#EF4444" />
-                  ) : (
-                    <Mic size={14} color="#0EA5E9" />
-                  )}
-                  <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
-                    {isListening ? "Stop Listening" : "Voice Guide"}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <View style={styles.headerActions}>
+                {(input.length > 0 || symptoms.length > 0 || stage.length > 0) && (
+                  <TouchableOpacity 
+                    style={styles.clearButton}
+                    onPress={() => {
+                      setInput("");
+                      setOriginalText("");
+                      setSymptoms("");
+                      setStage("");
+                      setOutput(null);
+                    }}
+                  >
+                    <Text style={styles.clearButtonText}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+                {browserSupportsSpeechRecognition && (
+                  <TouchableOpacity 
+                    style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
+                    onPress={handleToggleVoice}
+                  >
+                    {isListening ? (
+                      <MicOff size={14} color="#EF4444" />
+                    ) : (
+                      <Mic size={14} color="#0EA5E9" />
+                    )}
+                    <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
+                      {isListening ? "Stop Listening" : "Voice Guide"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
             <TextInput
               value={input}
@@ -348,6 +364,22 @@ const styles = StyleSheet.create({
   },
   voiceButtonTextActive: {
     color: "#EF4444",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  clearButtonText: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "600",
   },
   textarea: {
     fontSize: 14,
