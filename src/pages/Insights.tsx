@@ -10,6 +10,7 @@ import {
   Target
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
+import AppLayout from "@/components/AppLayout";
 
 const Insights = () => {
   const [loading, setLoading] = useState(true);
@@ -102,9 +103,6 @@ const Insights = () => {
             <BarChart3 size={80} color="#FFFFFF" opacity={0.8} />
           </View>
         </View>
-
-        </View>
-
       </ScrollView>
     </AppLayout>
   );
