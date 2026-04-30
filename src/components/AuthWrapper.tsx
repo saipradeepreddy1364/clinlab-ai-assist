@@ -21,7 +21,14 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
           .eq('id', session.user.id)
           .single();
         
-        setProfile(profile);
+        if (profile) {
+          setProfile(profile);
+        } else {
+          // Profile was deleted, but auth session remains. Force logout.
+          await supabase.auth.signOut();
+          setSession(null);
+          setProfile(null);
+        }
       }
       setLoading(false);
     };
@@ -37,30 +44,30 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // Real-time listener for profile updates (approval)
-    let profileSubscription: any;
-    if (session?.user) {
-      profileSubscription = supabase
-        .channel(`profile-${session.user.id}`)
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'profiles',
-          filter: `id=eq.${session.user.id}`
-        }, (payload) => {
-          setProfile(payload.new);
-        })
-        .subscribe();
+    // Polling for profile updates (approval or rejection) since realtime might be off
+    let pollInterval: ReturnType<typeof setInterval>;
+    if (session?.user && profile?.status === 'pending') {
+      pollInterval = setInterval(() => {
+        checkAuth();
+      }, 5000); // Check every 5 seconds while pending
     }
 
     return () => {
       authListener.subscription.unsubscribe();
-      if (profileSubscription) profileSubscription.unsubscribe();
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, profile?.status]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // If user is already deleted from auth, signOut might throw an error. Force clear session.
+      console.log("Forced clear due to signout error");
+    } finally {
+      setSession(null);
+      setProfile(null);
+    }
   };
 
   if (loading) {
