@@ -30,19 +30,7 @@ const Stack = createStackNavigator();
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isBooting, setIsBooting] = useState(true);
   useRealtimeNotifications();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsBooting(false);
-    }, 2000); // Show splash for 2 seconds on every refresh
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isBooting) {
-    return <SplashScreen />;
-  }
   
   return (
     <QueryClientProvider client={queryClient}>
