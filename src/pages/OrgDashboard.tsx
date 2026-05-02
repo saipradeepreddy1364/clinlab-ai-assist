@@ -135,7 +135,7 @@ const OrgDashboard = () => {
     // Add polling since Supabase replication might not be enabled
     const pollInterval = setInterval(() => {
       fetchData();
-    }, 10000);
+    }, 1000);
 
     return () => {
       clearInterval(pollInterval);

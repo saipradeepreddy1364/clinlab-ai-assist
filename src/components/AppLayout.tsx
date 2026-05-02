@@ -139,8 +139,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         setHasNewNotifications(count ? count > 0 : false);
       };
 
-      // Poll every 10 seconds
-      pollInterval = setInterval(checkPending, 10000);
+      // Poll every 1 second
+      pollInterval = setInterval(checkPending, 1000);
     };
 
     setupPolling();

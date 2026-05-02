@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { Clock, AlertCircle, LogOut } from "lucide-react-native";
 
@@ -49,7 +49,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
     if (session?.user && profile?.status === 'pending') {
       pollInterval = setInterval(() => {
         checkAuth();
-      }, 5000); // Check every 5 seconds while pending
+      }, 1000); // Check every 1 second while pending
     }
 
     return () => {
@@ -72,8 +72,16 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0EA5E9" />
+      <View style={styles.splashContainer}>
+        <View style={styles.logoWrapper}>
+          <Image 
+            source={{ uri: "/pwa-512x512.png" }} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+        <ActivityIndicator size="small" color="#0EA5E9" style={styles.loader} />
+        <Text style={styles.tagline}>AI Dental Clinical Assistant</Text>
       </View>
     );
   }
@@ -134,6 +142,38 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 const styles = StyleSheet.create({
+  splashContainer: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  logoWrapper: {
+    width: 280,
+    height: 280,
+    marginBottom: 20,
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
+  },
+  logo: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 60,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  tagline: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 2,
+  },
   center: {
     flex: 1,
     alignItems: "center",
