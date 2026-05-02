@@ -25,7 +25,7 @@ const SplashScreen = () => {
           return { session: null, role: null };
         })(),
         // Minimum 3-second display timer
-        new Promise(resolve => setTimeout(resolve, 3000)),
+        new Promise(resolve => setTimeout(resolve, 4000)),
       ]);
 
       // Navigate only after BOTH auth is done AND 3 seconds have passed
@@ -52,8 +52,6 @@ const SplashScreen = () => {
           resizeMode="contain"
         />
       </View>
-      <ActivityIndicator size="small" color="#0EA5E9" style={styles.loader} />
-      <Text style={styles.tagline}>AI Dental Clinical Assistant</Text>
     </View>
   );
 };
