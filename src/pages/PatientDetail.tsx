@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator } from "react-native";
+import React, { useState, useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Platform } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import {
   FileText,
@@ -12,9 +12,9 @@ import {
   Calendar,
   Loader2,
   AlertCircle,
-  Upload
+  Upload,
+  Trash2
 } from "lucide-react-native";
-import * as DocumentPicker from "expo-document-picker";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
@@ -34,6 +34,7 @@ const PatientDetail = () => {
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<any>(null);
 
   const fetchFiles = async (doctorId: string, patientName: string) => {
     const { data: storageFiles } = await supabase.storage
@@ -105,45 +106,59 @@ const PatientDetail = () => {
   }
 
   const handleFileUpload = async () => {
+    if (Platform.OS === 'web') {
+      // Web: use a hidden HTML file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '*/*';
+      input.multiple = false;
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await uploadFile(file.name, file.type, file);
+      };
+      input.click();
+    }
+  };
+
+  const uploadFile = async (fileName: string, mimeType: string, fileData: any) => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "*/*",
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) return;
-
       setUploading(true);
-      const file = result.assets[0];
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
-
-      const fileExt = file.name.split('.').pop();
+      const fileExt = fileName.split('.').pop();
       const sanitizedPatient = patient.patient_name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
       const sanitizedDate = new Date().toISOString().split('T')[0];
-      
-      const fileName = `${sanitizedPatient}_Report_${sanitizedDate}--${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const uploadName = `${sanitizedPatient}_Report_${sanitizedDate}--${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${uploadName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('clinical-files')
-        .upload(filePath, blob, {
-          contentType: file.mimeType || 'application/octet-stream',
+        .upload(filePath, fileData, {
+          contentType: mimeType || 'application/octet-stream',
           upsert: true
         });
 
       if (uploadError) throw uploadError;
-
       await fetchFiles(user.id, patient.patient_name);
+      alert('File uploaded successfully!');
     } catch (error: any) {
       console.error("Upload failed:", error.message);
-      alert(error.message);
+      alert('Upload failed: ' + error.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteFile = async (filePath: string) => {
+    if (!window.confirm('Are you sure you want to delete this file?')) return;
+    const { error } = await supabase.storage.from('clinical-files').remove([filePath]);
+    if (error) {
+      alert('Delete failed: ' + error.message);
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await fetchFiles(user.id, patient.patient_name);
     }
   };
 
@@ -260,6 +275,12 @@ const PatientDetail = () => {
                 }}
               >
                 <Download size={18} color="#64748B" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteFile(f.path)}
+              >
+                <Trash2 size={16} color="#EF4444" />
               </TouchableOpacity>
             </View>
           ))
@@ -606,6 +627,15 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 4,
   },
 });
 

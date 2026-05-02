@@ -161,17 +161,15 @@ const Patients = () => {
                     <Text style={styles.patientName}>{p.patient_name}</Text>
                     {p.is_urgent && <AlertCircle size={14} color="#EF4444" />}
                   </View>
-                  <Text style={styles.caseSubtext}>Tooth {p.tooth_number} · {p.diagnosis}</Text>
-                  
-                  {fileCounts[p.patient_name] && (
-                    <TouchableOpacity 
-                      onPress={() => navigation.navigate("PatientDetail", { id: p.id })}
-                      style={styles.reportsLink}
-                    >
-                      <FileText size={12} color="#0EA5E9" />
-                      <Text style={styles.reportsText}>{fileCounts[p.patient_name]} reports available</Text>
-                    </TouchableOpacity>
-                  )}
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.caseSubtext}>Tooth {p.tooth_number} · {p.diagnosis}</Text>
+                    <View style={styles.fileCountBadge}>
+                      <FileText size={11} color={fileCounts[p.patient_name] > 0 ? "#0EA5E9" : "#94A3B8"} />
+                      <Text style={[styles.fileCountText, fileCounts[p.patient_name] > 0 && styles.fileCountTextActive]}>
+                        {fileCounts[p.patient_name] || 0} {fileCounts[p.patient_name] === 1 ? "report" : "reports"}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
                 <View style={[styles.statusBadge, p.is_urgent && styles.statusBadgeUrgent]}>
                   <Text style={[styles.statusText, p.is_urgent && styles.statusTextUrgent]}>
@@ -355,7 +353,30 @@ const styles = StyleSheet.create({
   },
   spin: {
     // spin animation
-  }
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  fileCountBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  fileCountText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#94A3B8",
+  },
+  fileCountTextActive: {
+    color: "#0EA5E9",
+  },
 });
 
 export default Patients;
