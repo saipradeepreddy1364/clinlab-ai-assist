@@ -195,7 +195,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 <Text style={styles.roleBadgeText}>{role}</Text>
               </View>
             </View>
-            <Text style={[styles.headerTitle, isDark && styles.textWhite]}>{title}</Text>
           </View>
         </View>
 

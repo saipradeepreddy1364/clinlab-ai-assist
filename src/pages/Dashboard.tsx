@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useAppData } from "@/lib/AppDataContext";
 import {
   FilePlus2,
   ClipboardList,
@@ -26,89 +27,81 @@ const actions = [
 
 const Dashboard = () => {
   const navigation = useNavigation<any>();
+  const { data: preloadedData, isPreloaded } = useAppData();
   const [userName, setUserName] = useState("Doctor");
   const [greeting, setGreeting] = useState("Good morning");
-  const [stats, setStats] = useState({
-    active: 0,
-    lab: 0,
-    checkup: 0,
-  });
-  const [recentCases, setRecentCases] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<"doctor" | "organization" | "loading">("loading");
-  const [pendingCount, setPendingCount] = useState(0);
+  const [stats, setStats] = useState(preloadedData.stats);
+  const [recentCases, setRecentCases] = useState<any[]>(preloadedData.recentCases);
+  const [loading, setLoading] = useState(!isPreloaded);
+  const [role, setRole] = useState<"doctor" | "organization" | "loading">(preloadedData.profile?.role || "loading");
+  const [pendingCount, setPendingCount] = useState(preloadedData.pendingCount);
 
   useEffect(() => {
-    const fetchData = async () => {
-      // Removed guest mode logic
+    // Set greeting
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
 
+    // If we have pre-loaded data, use it immediately
+    if (isPreloaded && preloadedData.profile) {
+      const userRole = preloadedData.profile.role || 'doctor';
+      setRole(userRole);
+      setUserName(preloadedData.profile.full_name || "Doctor");
+      setStats(preloadedData.stats);
+      setRecentCases(preloadedData.recentCases.slice(0, 3).map(c => ({
+        id: c.id,
+        name: c.patient_name,
+        tooth: c.tooth_number,
+        dx: c.diagnosis,
+        urgent: c.is_urgent,
+      })));
+      setLoading(false);
+
+      if (userRole === 'organization') {
+        navigation.replace("OrgDashboard");
+      }
+      return;
+    }
+
+    // Fallback: fresh fetch if not pre-loaded (e.g. after manual login)
+    const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       
       if (user) {
         setUserName(user.user_metadata?.full_name || "Doctor");
-        
-        // 1. Try metadata first (faster and more reliable if profiles table 404s)
         const metaRole = user.user_metadata?.role;
-        if (metaRole) {
-          console.log("Dashboard: Detected role from metadata:", metaRole);
-          setRole(metaRole);
-        }
 
-        // 2. Fetch profile for status check (ignore 404s for role detection)
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
-          .select('role, id')
+          .select('role, id, full_name')
           .eq('id', user.id)
           .single();
 
-        if (profileError) {
-          console.error("Dashboard: Error fetching profile:", profileError);
-        }
-        
         const userRole = profile?.role || metaRole || 'doctor';
-        console.log("Dashboard: Final detected role:", userRole);
         setRole(userRole);
+        setUserName(profile?.full_name || user.user_metadata?.full_name || "Doctor");
 
         if (userRole === 'organization') {
-          console.log("Dashboard: Redirecting to OrgDashboard...");
-          navigation.navigate("OrgDashboard");
+          navigation.replace("OrgDashboard");
           return;
         }
 
-        // For Organizations, fetch pending doctors count
-        if (userRole === 'organization') {
-          const { count } = await supabase
-            .from('profiles')
-            .select('id', { count: 'exact' })
-            .eq('org_id', user.id)
-            .eq('status', 'pending');
-          setPendingCount(count || 0);
-        }
+        const { data: cases } = await supabase
+          .from('cases')
+          .select('*')
+          .eq('doctor_id', user.id)
+          .order('created_at', { ascending: false });
 
-        // Build query based on role
-        let query = supabase.from('cases').select('*');
-        
-        if (userRole === 'organization') {
-          // Organizations see all cases for their clinic
-          query = query.eq('org_id', user.id);
-        } else {
-          // Doctors see only their own cases
-          query = query.eq('doctor_id', user.id);
-        }
-
-        const { data: cases, error: casesError } = await query.order('created_at', { ascending: false });
-
-        if (!casesError && cases) {
+        if (cases) {
           setRecentCases(cases.slice(0, 3).map(c => ({
             id: c.id,
             name: c.patient_name,
             tooth: c.tooth_number,
             dx: c.diagnosis,
             urgent: c.is_urgent,
-            doctor: c.doctor_name, // Include doctor name
           })));
-          
           setStats({
             active: cases.filter(c => c.status === 'in-progress').length,
             lab: cases.filter(c => c.status === 'lab-sent').length,
@@ -119,15 +112,10 @@ const Dashboard = () => {
       setLoading(false);
     };
 
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Good morning");
-    else if (hour < 17) setGreeting("Good afternoon");
-    else setGreeting("Good evening");
-
     fetchData();
-  }, []);
+  }, [isPreloaded]);
 
-  if (loading || role === 'loading') {
+  if (loading) {
     return (
       <AppLayout>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>

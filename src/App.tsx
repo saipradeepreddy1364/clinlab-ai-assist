@@ -7,6 +7,7 @@ import { StatusBar } from "expo-status-bar";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthWrapper } from "@/components/AuthWrapper";
+import { AppDataProvider } from "@/lib/AppDataContext";
 import SplashScreen from "./pages/SplashScreen";
 import Login from "./pages/Login";
 import DoctorLogin from "./pages/DoctorLogin";
@@ -34,10 +35,11 @@ const App = () => {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <AuthWrapper>
-            <NavigationContainer>
+      <AppDataProvider>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <AuthWrapper>
+              <NavigationContainer>
               <StatusBar style="auto" />
               <Stack.Navigator 
                 initialRouteName="SplashScreen"
@@ -71,6 +73,7 @@ const App = () => {
           </AuthWrapper>
         </SafeAreaProvider>
       </ThemeProvider>
+      </AppDataProvider>
     </QueryClientProvider>
   );
 };

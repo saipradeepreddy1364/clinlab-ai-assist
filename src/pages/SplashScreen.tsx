@@ -1,34 +1,86 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from "react-native";
+import { View, StyleSheet, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { supabase } from "@/lib/supabase";
+import { useAppData } from "@/lib/AppDataContext";
 
 const SplashScreen = () => {
   const navigation = useNavigation<any>();
+  const { setData, setIsPreloaded } = useAppData();
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Run auth check and minimum display timer simultaneously
+      // Run auth check, data pre-fetch, and minimum 4s display timer all at once
       const [authResult] = await Promise.all([
-        // Auth check
+        // Auth check + data prefetch
         (async () => {
           const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', session.user.id)
-              .single();
-            const role = profile?.role || session.user.user_metadata?.role || 'doctor';
-            return { session, role };
+          if (!session) return { session: null, role: null };
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          const role = profile?.role || session.user.user_metadata?.role || 'doctor';
+
+          // Pre-fetch dashboard data in the background while splash shows
+          if (role === 'organization') {
+            const [doctorsResult, casesResult, pendingResult] = await Promise.all([
+              supabase.from('profiles').select('*').eq('org_id', session.user.id).eq('role', 'doctor').eq('status', 'approved'),
+              supabase.from('cases').select('*').eq('org_id', session.user.id).order('created_at', { ascending: false }),
+              supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('org_id', session.user.id).eq('role', 'doctor').eq('status', 'pending'),
+            ]);
+
+            const doctors = doctorsResult.data || [];
+            const cases = casesResult.data || [];
+            const pendingCount = pendingResult.count || 0;
+
+            setData({
+              profile,
+              doctors,
+              cases,
+              pendingCount,
+              recentCases: cases.slice(0, 5).map(c => ({
+                ...c,
+                doctor_name: doctors.find((d: any) => d.id === c.doctor_id)?.full_name || "Unknown Doctor",
+              })),
+              stats: {
+                active: cases.filter(c => c.status === 'in-progress').length,
+                lab: cases.filter(c => c.status === 'lab-sent').length,
+                checkup: cases.filter(c => c.status === 'checkup').length,
+                totalDoctors: new Set(cases.map(c => c.doctor_id)).size,
+              },
+            });
+          } else {
+            const { data: cases } = await supabase
+              .from('cases')
+              .select('*')
+              .eq('doctor_id', session.user.id)
+              .order('created_at', { ascending: false });
+
+            setData({
+              profile,
+              cases: cases || [],
+              recentCases: (cases || []).slice(0, 5),
+              stats: {
+                active: (cases || []).filter(c => c.status === 'in-progress').length,
+                lab: (cases || []).filter(c => c.status === 'lab-sent').length,
+                checkup: (cases || []).filter(c => c.status === 'checkup').length,
+                totalDoctors: 0,
+              },
+            });
           }
-          return { session: null, role: null };
+
+          setIsPreloaded(true);
+          return { session, role };
         })(),
-        // Minimum 3-second display timer
+        // Minimum 4-second display timer
         new Promise(resolve => setTimeout(resolve, 4000)),
       ]);
 
-      // Navigate only after BOTH auth is done AND 3 seconds have passed
+      // Navigate only after BOTH data is ready AND 4 seconds have passed
       if (authResult.session) {
         if (authResult.role === 'organization') {
           navigation.replace("OrgDashboard");

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Platform, Alert } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useAppData } from "@/lib/AppDataContext";
 import {
   Activity,
   ClipboardList,
@@ -30,17 +31,13 @@ const showAlert = (title: string, message: string, actions?: any[]) => {
 
 const OrgDashboard = () => {
   const navigation = useNavigation<any>();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    active: 0,
-    lab: 0,
-    checkup: 0,
-    totalDoctors: 0,
-  });
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const [recentCases, setRecentCases] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
-  const [pendingCount, setPendingCount] = useState(0);
+  const { data: preloadedData, isPreloaded } = useAppData();
+  const [loading, setLoading] = useState(!isPreloaded);
+  const [stats, setStats] = useState(preloadedData.stats);
+  const [doctors, setDoctors] = useState<any[]>(preloadedData.doctors);
+  const [recentCases, setRecentCases] = useState<any[]>(preloadedData.recentCases);
+  const [profile, setProfile] = useState<any>(preloadedData.profile);
+  const [pendingCount, setPendingCount] = useState(preloadedData.pendingCount);
 
   const fetchData = useCallback(async () => {
     try {
