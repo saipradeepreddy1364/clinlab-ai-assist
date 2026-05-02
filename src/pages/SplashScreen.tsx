@@ -8,18 +8,29 @@ const SplashScreen = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Run auth check and minimum display timer simultaneously
+      const [authResult] = await Promise.all([
+        // Auth check
+        (async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+            const role = profile?.role || session.user.user_metadata?.role || 'doctor';
+            return { session, role };
+          }
+          return { session: null, role: null };
+        })(),
+        // Minimum 3-second display timer
+        new Promise(resolve => setTimeout(resolve, 3000)),
+      ]);
 
-      if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        const role = profile?.role || session.user.user_metadata?.role || 'doctor';
-        
-        if (role === 'organization') {
+      // Navigate only after BOTH auth is done AND 3 seconds have passed
+      if (authResult.session) {
+        if (authResult.role === 'organization') {
           navigation.replace("OrgDashboard");
         } else {
           navigation.replace("Dashboard");
