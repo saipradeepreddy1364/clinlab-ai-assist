@@ -29,7 +29,7 @@ const DoctorLogin = () => {
         // Check if role is doctor
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, status')
           .eq('id', data.user.id)
           .single();
 
@@ -38,11 +38,23 @@ const DoctorLogin = () => {
           throw new Error("This login is for Doctors only. Organizations should use the main portal.");
         }
 
+        if (profile?.status === 'pending') {
+          await supabase.auth.signOut();
+          Alert.alert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+          return;
+        }
+
+        if (profile?.status === 'rejected') {
+          await supabase.auth.signOut();
+          Alert.alert("Access Denied", "Your application was rejected by the organization.");
+          return;
+        }
+
         navigation.navigate("Dashboard");
       }
     } catch (error: any) {
       if (error.message.includes("Email not confirmed")) {
-        Alert.alert("Email Verification Required", "Please check your professional inbox and click the verification link. If you didn't receive it, check your spam or ask your administrator.");
+        Alert.alert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
       } else {
         Alert.alert("Login Failed", error.message);
       }

@@ -44,19 +44,31 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // Polling for profile updates (approval or rejection) since realtime might be off
-    let pollInterval: ReturnType<typeof setInterval>;
-    if (session?.user && profile?.status === 'pending') {
-      pollInterval = setInterval(() => {
-        checkAuth();
-      }, 1000); // Check every 1 second while pending
+    // Use Realtime instead of polling for profile updates
+    let channel: any;
+    if (session?.user) {
+      channel = supabase.channel(`profile-updates-${session.user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${session.user.id}`
+          },
+          () => {
+            console.log("AuthWrapper: Profile updated via Realtime! Checking auth...");
+            checkAuth();
+          }
+        )
+        .subscribe();
     }
 
     return () => {
       authListener.subscription.unsubscribe();
-      if (pollInterval) clearInterval(pollInterval);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [session?.user?.id, profile?.status]);
+  }, [session?.user?.id]);
 
   const handleLogout = async () => {
     try {

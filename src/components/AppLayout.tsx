@@ -121,10 +121,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
     checkUser();
 
-    let pollInterval: ReturnType<typeof setInterval>;
-
-    // Use polling for pending approvals since Supabase Replication may not be enabled
-    const setupPolling = async () => {
+    // Use Realtime for pending approval notifications
+    let channel: any;
+    const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -139,11 +138,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         setHasNewNotifications(count ? count > 0 : false);
       };
 
-      // Poll every 1 second
-      pollInterval = setInterval(checkPending, 1000);
+      checkPending(); // Initial check
+
+      channel = supabase.channel(`org-pending-${session.user.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles', filter: `org_id=eq.${session.user.id}` },
+          () => checkPending()
+        )
+        .subscribe();
     };
 
-    setupPolling();
+    setupRealtime();
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("AppLayout: Auth state change:", event);
@@ -158,7 +164,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       if (authListener?.subscription) authListener.subscription.unsubscribe();
-      if (pollInterval) clearInterval(pollInterval);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [navigation]);
 

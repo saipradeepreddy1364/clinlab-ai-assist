@@ -25,6 +25,7 @@ const Signup = () => {
   const [orgModalVisible, setOrgModalVisible] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
+  const [pendingModalVisible, setPendingModalVisible] = useState(false);
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -143,6 +144,36 @@ const Signup = () => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   }, [authType]);
 
+  // Background auto-login polling if stuck on Signup modal
+  useEffect(() => {
+    if (!pendingModalVisible || authType !== 'doctor') return;
+
+    const pollSignIn = setInterval(async () => {
+      // Try to silently sign in
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (data?.session) {
+        // Successful login, check profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', data.session.user.id)
+          .single();
+
+        if (profile?.status === 'approved') {
+          clearInterval(pollSignIn);
+          setPendingModalVisible(false);
+          navigation.replace("Dashboard");
+        }
+      }
+    }, 3000); // Check every 3 seconds
+
+    return () => clearInterval(pollSignIn);
+  }, [pendingModalVisible, formData.email, formData.password]);
+
   const handleSignup = async () => {
     // Basic validation
     if (!formData.email || !formData.password || !formData.name || !formData.phone) {
@@ -207,8 +238,8 @@ const Signup = () => {
         }
 
         if (authType === "doctor") {
-          // Redirect doctors immediately to Dashboard
-          navigation.replace("Dashboard");
+          // Show pending approval modal for doctors
+          setPendingModalVisible(true);
         } else {
           // Show verification modal for organizations
           setVerifying(true);
@@ -531,6 +562,29 @@ const Signup = () => {
             >
               <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>I'll verify later</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={pendingModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingBottom: 40 }]}>
+            <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            
+            <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: '#FFFBEB', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 16 }}>
+              <Stethoscope size={32} color="#F59E0B" />
+            </View>
+
+            <Text style={[styles.modalHeader, { textAlign: 'center' }]}>Waiting for Approval</Text>
+            <Text style={{ textAlign: 'center', color: '#64748B', marginBottom: 24, lineHeight: 22, fontSize: 15 }}>
+              Your application has been sent to{"\n"}
+              <Text style={{ fontWeight: '700', color: '#0F172A' }}>{formData.organization.name}</Text>.{"\n\n"}
+              You will be able to log in once the organization administrator approves your access.
+            </Text>
+            <View style={{ marginTop: 8, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#F59E0B" />
+              <Text style={{ marginTop: 12, color: '#F59E0B', fontWeight: '600' }}>Checking status automatically...</Text>
+            </View>
           </View>
         </View>
       </Modal>
