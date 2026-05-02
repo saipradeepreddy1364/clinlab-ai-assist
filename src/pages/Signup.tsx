@@ -382,7 +382,7 @@ const Signup = () => {
                   style={styles.pickerTrigger}
                   onPress={() => setOrgModalVisible(true)}
                 >
-                  <Text style={styles.pickerValue}>
+                  <Text style={styles.pickerValue} numberOfLines={2}>
                     {formData.organization.name || "Choose Clinic/Hospital"}
                   </Text>
                   <ChevronDown size={18} color="#64748B" />
@@ -447,8 +447,8 @@ const Signup = () => {
       </Modal>
 
       <Modal visible={orgModalVisible} transparent animationType="slide">
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setOrgModalVisible(false)}>
-          <View style={styles.modalContent}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setOrgModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
             <Text style={styles.modalHeader}>Registered Organizations</Text>
             <View style={styles.diagBox}>
               <Text style={styles.diagText}>Database Status: {organizations.length > 0 ? "Connected" : "Searching..."}</Text>
@@ -465,7 +465,12 @@ const Signup = () => {
             >
               <Text style={styles.refreshBtnText}>Refresh from Supabase</Text>
             </TouchableOpacity>
-            <ScrollView style={{ maxHeight: 400 }}>
+            <ScrollView 
+              style={{ maxHeight: 400 }}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="handled"
+              scrollEventThrottle={16}
+            >
               {organizations.length > 0 ? (
                 organizations.map(org => (
                   <TouchableOpacity 
@@ -476,7 +481,7 @@ const Signup = () => {
                       setOrgModalVisible(false);
                     }}
                   >
-                    <Text style={styles.modalOptionText}>{org.full_name}</Text>
+                    <Text style={styles.modalOptionText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>{org.full_name}</Text>
                   </TouchableOpacity>
                 ))
               ) : (
@@ -486,7 +491,7 @@ const Signup = () => {
                 </View>
               )}
             </ScrollView>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
       <Modal visible={verifyModalVisible} transparent animationType="fade">
@@ -675,19 +680,23 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   pickerTrigger: {
-    height: 44,
+    minHeight: 44,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 12,
     paddingHorizontal: 16,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   pickerValue: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#0F172A",
+    flex: 1,
+    marginRight: 8,
   },
   heroButton: {
     height: 50,
@@ -764,16 +773,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   modalOption: {
-    height: 50,
+    minHeight: 50,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
   modalOptionText: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#0F172A",
     fontWeight: "500",
+    textAlign: "center",
+    flexWrap: "wrap",
   },
   diagBox: {
     backgroundColor: "#F1F5F9",
