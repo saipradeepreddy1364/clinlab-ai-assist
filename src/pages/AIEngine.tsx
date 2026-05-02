@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator } from "react-native";
 import {
   Sparkles,
   CheckCircle2,
@@ -10,7 +10,11 @@ import {
   ArrowRight,
   Loader2,
   Mic,
-  MicOff
+  MicOff,
+  FileText,
+  ChevronDown,
+  X,
+  FileSearch
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
@@ -84,17 +88,98 @@ const AIEngine = () => {
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
   const [originalText, setOriginalText] = useState("");
+  const [cases, setCases] = useState<any[]>([]);
+  const [selectedCase, setSelectedCase] = useState<any>(null);
+  const [showCasePicker, setShowCasePicker] = useState(false);
+  const [fileAnalysis, setFileAnalysis] = useState<string | null>(null);
+  const [fetchingFile, setFetchingFile] = useState(false);
+
+  useEffect(() => {
+    const fetchCases = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('cases')
+        .select('*')
+        .eq('doctor_id', user.id)
+        .order('created_at', { ascending: false });
+      if (data) setCases(data);
+    };
+    fetchCases();
+  }, []);
+
+  const handleSelectCase = async (patientCase: any) => {
+    setSelectedCase(patientCase);
+    setShowCasePicker(false);
+    setFileAnalysis(null);
+
+    // Pre-fill input fields from case data
+    setSymptoms(patientCase.diagnosis || "");
+    setStage(patientCase.status?.replace(/-/g, ' ') || "");
+    setInput(`Patient: ${patientCase.patient_name}, Tooth: ${patientCase.tooth_number}, Diagnosis: ${patientCase.diagnosis}`);
+
+    // Fetch latest uploaded file for this patient
+    setFetchingFile(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: storageFiles } = await supabase.storage
+        .from('clinical-files')
+        .list(user.id);
+
+      if (storageFiles && storageFiles.length > 0) {
+        const sanitizedName = patientCase.patient_name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const patientFiles = storageFiles.filter(f =>
+          f.name.toLowerCase().startsWith(sanitizedName.toLowerCase())
+        );
+
+        if (patientFiles.length > 0) {
+          // Sort by most recent and get the latest
+          const latestFile = patientFiles.sort((a, b) =>
+            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+          )[0];
+
+          const { data: urlData } = await supabase.storage
+            .from('clinical-files')
+            .createSignedUrl(`${user.id}/${latestFile.name}`, 3600);
+
+          if (urlData?.signedUrl) {
+            // Generate analysis based on file metadata + case data
+            const ext = latestFile.name.split('.').pop()?.toLowerCase();
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
+            const fileType = isImage ? 'radiograph/image' : 'document/report';
+
+            setFileAnalysis(
+              `📎 Latest ${fileType} detected for ${patientCase.patient_name}\n\n` +
+              `File: ${latestFile.name.split('--').pop() || latestFile.name}\n` +
+              `Uploaded: ${new Date(latestFile.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}\n\n` +
+              `Based on the clinical record for Tooth ${patientCase.tooth_number} with diagnosis of "${patientCase.diagnosis}", ` +
+              `the uploaded ${fileType} has been linked to this case. ` +
+              `Cross-reference with the AI suggestion below for complete clinical guidance.`
+            );
+          } else {
+            setFileAnalysis(`No files found for ${patientCase.patient_name}. Upload a report from the Records page for file-linked analysis.`);
+          }
+        } else {
+          setFileAnalysis(`No reports uploaded yet for ${patientCase.patient_name}. Go to Records → Patient Card → tap to open → Files tab to upload.`);
+        }
+      } else {
+        setFileAnalysis(`No files found in storage. Upload a report from the Records page to enable file analysis.`);
+      }
+    } catch (err) {
+      setFileAnalysis("Could not fetch patient files. Please try again.");
+    } finally {
+      setFetchingFile(false);
+    }
+  };
 
   const { isListening, startListening, stopListening, browserSupportsSpeechRecognition } = useVoiceInput((text) => {
     setInput(originalText ? `${originalText} ${text}` : text);
   });
   const handleToggleVoice = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      setOriginalText(input);
-      startListening();
-    }
+    if (isListening) { stopListening(); }
+    else { setOriginalText(input); startListening(); }
   };
 
   const handleSuggest = () => {
@@ -124,7 +209,68 @@ const AIEngine = () => {
           Share your clinical findings or the current procedure step to get AI-validated guidance.
         </Text>
 
-        {/* Entry area */}
+        {/* Patient Case Selector */}
+        <TouchableOpacity style={styles.patientSelector} onPress={() => setShowCasePicker(true)}>
+          <FileSearch size={16} color="#0EA5E9" />
+          <Text style={styles.patientSelectorText}>
+            {selectedCase ? selectedCase.patient_name : "Select a Patient Case"}
+          </Text>
+          <ChevronDown size={16} color="#94A3B8" />
+        </TouchableOpacity>
+
+        {/* Patient Picker Modal */}
+        <Modal visible={showCasePicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Patient Case</Text>
+                <TouchableOpacity onPress={() => setShowCasePicker(false)}>
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView>
+                {cases.length === 0 ? (
+                  <Text style={styles.emptyPickerText}>No cases found. Add cases from the Records page.</Text>
+                ) : (
+                  cases.map(c => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={styles.casePickerItem}
+                      onPress={() => handleSelectCase(c)}
+                    >
+                      <View style={styles.casePickerAvatar}>
+                        <Text style={styles.casePickerAvatarText}>{c.patient_name?.charAt(0)}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.casePickerName}>{c.patient_name}</Text>
+                        <Text style={styles.casePickerMeta}>Tooth {c.tooth_number} · {c.diagnosis}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* File Analysis Card */}
+        {(fetchingFile || fileAnalysis) && (
+          <View style={styles.fileAnalysisCard}>
+            <View style={styles.fileAnalysisHeader}>
+              <FileText size={14} color="#8B5CF6" />
+              <Text style={styles.fileAnalysisTitle}>Report Analysis</Text>
+            </View>
+            {fetchingFile ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <ActivityIndicator size="small" color="#8B5CF6" />
+                <Text style={styles.fileAnalysisText}>Fetching latest report...</Text>
+              </View>
+            ) : (
+              <Text style={styles.fileAnalysisText}>{fileAnalysis}</Text>
+            )}
+          </View>
+        )}
+
         <View style={styles.entrySection}>
           <View style={styles.grid}>
             <View style={styles.gridItem}>
@@ -538,7 +684,108 @@ const styles = StyleSheet.create({
   },
   pulse: {
     // Pulse logic in RN usually requires Animated API
-  }
+  },
+  patientSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  patientSelectorText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#0F172A",
+    fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  casePickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  casePickerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#E0F2FE",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  casePickerAvatarText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0EA5E9",
+  },
+  casePickerName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  casePickerMeta: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  emptyPickerText: {
+    fontSize: 13,
+    color: "#94A3B8",
+    textAlign: "center",
+    padding: 24,
+  },
+  fileAnalysisCard: {
+    backgroundColor: "rgba(139, 92, 246, 0.06)",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.2)",
+    gap: 8,
+  },
+  fileAnalysisHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  fileAnalysisTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#8B5CF6",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  fileAnalysisText: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 20,
+  },
 });
 
 export default AIEngine;

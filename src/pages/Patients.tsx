@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Search, Plus, AlertCircle, Loader2, FileText } from "lucide-react-native";
+import { Search, Plus, AlertCircle, Loader2, FileText, Calendar } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
@@ -161,6 +161,14 @@ const Patients = () => {
                     <Text style={styles.patientName}>{p.patient_name}</Text>
                     {p.is_urgent && <AlertCircle size={14} color="#EF4444" />}
                   </View>
+                  <View style={styles.dateRow}>
+                    <Calendar size={10} color="#94A3B8" />
+                    <Text style={styles.dateText}>
+                      {new Date(p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {' · '}
+                      {new Date(p.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    </Text>
+                  </View>
                   <View style={styles.cardFooter}>
                     <Text style={styles.caseSubtext}>Tooth {p.tooth_number} · {p.diagnosis}</Text>
                     <View style={styles.fileCountBadge}>
@@ -301,6 +309,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748B",
     marginTop: 2,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 3,
+  },
+  dateText: {
+    fontSize: 10,
+    color: "#94A3B8",
+    fontWeight: "500",
   },
   reportsLink: {
     flexDirection: "row",

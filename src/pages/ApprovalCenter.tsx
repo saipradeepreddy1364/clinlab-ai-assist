@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
-import { UserCheck, UserX, Clock, ChevronLeft, ShieldCheck } from "lucide-react-native";
+import { UserCheck, UserX, Clock, ChevronLeft, ShieldCheck, Mail, Phone, Stethoscope, Calendar } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import AppLayout from "@/components/AppLayout";
 
@@ -120,11 +120,34 @@ const ApprovalCenter = () => {
                     </View>
                     <View style={styles.details}>
                       <Text style={styles.doctorName}>{doc.full_name}</Text>
-                      <Text style={styles.doctorMeta}>{doc.specialization || "General Dentist"}</Text>
-                      <View style={styles.timeRow}>
-                        <Clock size={12} color="#94A3B8" />
+                      
+                      <View style={styles.infoRow}>
+                        <Stethoscope size={12} color="#64748B" />
+                        <Text style={styles.infoText}>{doc.specialization || "General Dentist"}</Text>
+                      </View>
+
+                      {doc.email && (
+                        <View style={styles.infoRow}>
+                          <Mail size={12} color="#64748B" />
+                          <Text style={styles.infoText}>{doc.email}</Text>
+                        </View>
+                      )}
+
+                      {doc.phone && (
+                        <View style={styles.infoRow}>
+                          <Phone size={12} color="#64748B" />
+                          <Text style={styles.infoText}>{doc.phone}</Text>
+                        </View>
+                      )}
+
+                      <View style={styles.infoRow}>
+                        <Calendar size={12} color="#94A3B8" />
                         <Text style={styles.timeText}>
-                          Joined {new Date(doc.created_at).toLocaleDateString()}
+                          Applied {new Date(doc.created_at).toLocaleDateString('en-IN', {
+                            day: '2-digit', month: 'short', year: 'numeric'
+                          })} at {new Date(doc.created_at).toLocaleTimeString('en-IN', {
+                            hour: '2-digit', minute: '2-digit', hour12: true
+                          })}
                         </Text>
                       </View>
                     </View>
@@ -285,6 +308,17 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 11,
     color: "#94A3B8",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 3,
+  },
+  infoText: {
+    fontSize: 12,
+    color: "#64748B",
+    flex: 1,
   },
   actions: {
     flexDirection: "row",
