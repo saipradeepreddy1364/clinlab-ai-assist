@@ -203,11 +203,12 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
   "alerts": ["Clinical alert 1", ...]
 }`;
 
-      // WARNING: Hardcoding API keys in frontend code is insecure for production. 
-      // For this prototype, replace the string below with your actual Gemini API Key from Google AI Studio.
-      const API_KEY = "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk";
-
-      if (API_KEY === "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk") {
+      // Support for both Vite (web) and Expo (mobile) environment variable formats
+      const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+                      (import.meta as any).env?.EXPO_PUBLIC_GEMINI_API_KEY ||
+                      "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk"; 
+      
+      if (!API_KEY || API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
         // Fallback to static mock if API key is not provided yet
         setTimeout(() => {
           let match = procedures["access cavity"]; // Default
