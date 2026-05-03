@@ -215,27 +215,8 @@ const Signup = () => {
       if (data.user) {
         setTempUserId(data.user.id);
         
-        // FORCE MANUAL SYNC: This bypasses the trigger to ensure the link is 100% made
-        console.log("Signup: Forcing manual profile sync for Org ID:", formData.organization.id);
-        const { error: profileError } = await supabase.from('profiles').upsert([{
-          id: data.user.id,
-          full_name: formData.name,
-          phone: formData.phone,
-          role: authType,
-          status: authType === "organization" ? "approved" : "pending",
-          specialization: authType === "doctor" ? formData.specialization : null,
-          org_id: authType === "doctor" ? formData.organization.id : null,
-          org_name: authType === "doctor" ? formData.organization.name : null,
-          updated_at: new Date().toISOString()
-        }]);
-
-        if (profileError) {
-          console.error("Critical Profile Sync Error:", profileError.message);
-          // If the manual sync fails, we alert the user so we know exactly why
-          showAlert("Database Link Error", `We created your account but couldn't link it to the hospital. Error: ${profileError.message}`);
-        } else {
-          console.log("Signup: Profile synced successfully!");
-        }
+        // Relies on Supabase Database Trigger (auth.users -> public.profiles) 
+        // to handle profile creation since the client doesn't have a session yet (due to email confirmation).
 
         if (authType === "doctor") {
           // Show pending approval modal for doctors

@@ -129,22 +129,13 @@ const OrgDashboard = () => {
   );
 
   useEffect(() => {
-    // Add Realtime since we have replication enabled now
-    const channel = supabase.channel(`org-dashboard`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'profiles' },
-        () => fetchData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'cases' },
-        () => fetchData()
-      )
-      .subscribe();
+    // Add polling since Supabase replication might not be enabled
+    const pollInterval = setInterval(() => {
+      fetchData();
+    }, 1000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [fetchData]);
 
