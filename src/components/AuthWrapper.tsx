@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from "react-native";
 import { supabase } from "@/lib/supabase";
-import { Clock, AlertCircle, LogOut } from "lucide-react-native";
+import { Clock, AlertCircle, LogOut, CheckCircle } from "lucide-react-native";
 
 export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
+  
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showRejectedPopup, setShowRejectedPopup] = useState(false);
+  const prevStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -22,9 +26,17 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
           .single();
         
         if (profile) {
+          if (prevStatusRef.current === 'pending' && profile.status === 'approved') {
+            setShowSuccessPopup(true);
+          }
+          prevStatusRef.current = profile.status;
           setProfile(profile);
         } else {
           // Profile was deleted, but auth session remains. Force logout.
+          if (prevStatusRef.current === 'pending') {
+            setShowRejectedPopup(true);
+          }
+          prevStatusRef.current = null;
           await supabase.auth.signOut();
           setSession(null);
           setProfile(null);
@@ -39,6 +51,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       if (!session) {
         setProfile(null);
+        prevStatusRef.current = null;
       } else {
         checkAuth();
       }
@@ -86,6 +99,51 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  if (showSuccessPopup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <View style={[styles.iconBox, { backgroundColor: "#D1FAE5" }]}>
+            <CheckCircle size={32} color="#10B981" />
+          </View>
+          <Text style={[styles.title, { color: "#065F46" }]}>Approval Successful!</Text>
+          <Text style={styles.message}>
+            The organization has approved your application. You now have full clinical access.
+          </Text>
+          
+          <TouchableOpacity 
+            style={[styles.logoutButton, { backgroundColor: "#10B981", borderWidth: 0 }]} 
+            onPress={() => setShowSuccessPopup(false)}
+          >
+            <Text style={[styles.logoutText, { color: "#FFFFFF", fontWeight: "600" }]}>Go to Dashboard</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (showRejectedPopup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <View style={[styles.iconBox, { backgroundColor: "#FEE2E2" }]}>
+            <AlertCircle size={32} color="#EF4444" />
+          </View>
+          <Text style={[styles.title, { color: "#B91C1C" }]}>Access Rejected</Text>
+          <Text style={styles.message}>
+            Your request to join the organization was rejected. Your application has been removed.
+            If you believe this is an error, please contact your clinic manager.
+          </Text>
+          
+          <TouchableOpacity style={styles.logoutButton} onPress={() => setShowRejectedPopup(false)}>
+            <LogOut size={16} color="#64748B" />
+            <Text style={styles.logoutText}>Back to Sign in</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   // If not logged in, just show children (Login/Signup pages)
   if (!session) return <>{children}</>;
 
@@ -115,28 +173,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // If rejected
-  if (profile?.status === 'rejected') {
-    return (
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <View style={[styles.iconBox, { backgroundColor: "#FEE2E2" }]}>
-            <AlertCircle size={32} color="#EF4444" />
-          </View>
-          <Text style={[styles.title, { color: "#B91C1C" }]}>Access Rejected</Text>
-          <Text style={styles.message}>
-            Your request to join <Text style={styles.bold}>{profile.org_name}</Text> was not approved by the organization administrator. 
-            If you believe this is an error, please contact your clinic manager.
-          </Text>
-          
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <LogOut size={16} color="#64748B" />
-            <Text style={styles.logoutText}>Back to Sign in</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  // Old 'rejected' card removed because we handle it above via state
 
   return <>{children}</>;
 };
