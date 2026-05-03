@@ -157,7 +157,14 @@ const OrgDashboard = () => {
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeInfo}>
             <Text style={styles.welcomeGreeting}>Welcome back,</Text>
-            <Text style={styles.welcomeName}>{profile?.full_name || "Organization"}</Text>
+            <Text 
+              style={styles.welcomeName}
+              adjustsFontSizeToFit
+              numberOfLines={1}
+              minimumFontScale={0.5}
+            >
+              {profile?.full_name || "Organization"}
+            </Text>
             <View style={styles.verifiedBadge}>
               <UserCheck size={12} color="#10B981" />
               <Text style={styles.verifiedText}>Verified Clinical Hub</Text>

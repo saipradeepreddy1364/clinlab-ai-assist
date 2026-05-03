@@ -182,24 +182,70 @@ const AIEngine = () => {
     else { setOriginalText(input); startListening(); }
   };
 
-  const handleSuggest = () => {
+  const handleSuggest = async () => {
     if (!input.trim() && !symptoms.trim()) return;
 
     setLoading(true);
-    // Simulate real AI processing time
-    setTimeout(() => {
-      const combinedInput = (input + " " + symptoms + " " + stage).toLowerCase();
-      let match = procedures["access cavity"]; // Default
 
-      if (combinedInput.includes("crown") || combinedInput.includes("prep") || combinedInput.includes("tooth 11")) {
-        match = procedures["crown prep"];
-      } else if (combinedInput.includes("extract") || combinedInput.includes("remove") || combinedInput.includes("caries")) {
-        match = procedures["extraction"];
+    try {
+      const combinedInput = `Patient Symptoms: ${symptoms}\nProcedure Stage: ${stage}\nDoctor Observations: ${input}`;
+
+      const prompt = `You are an expert dental AI assistant. Based on the following clinical input, provide a diagnostic assessment and procedural guidance.
+Input: ${combinedInput}
+
+You MUST return ONLY a valid JSON object with the exact following structure, no markdown formatting or backticks:
+{
+  "diagnosis": "Short diagnostic string including tooth number if applicable",
+  "confidence": "High", "Medium", or "Low",
+  "steps": ["Step 1", "Step 2", ...],
+  "instruments": ["Instrument 1", ...],
+  "materials": ["Material 1", ...],
+  "alerts": ["Clinical alert 1", ...]
+}`;
+
+      // WARNING: Hardcoding API keys in frontend code is insecure for production. 
+      // For this prototype, replace the string below with your actual Gemini API Key from Google AI Studio.
+      const API_KEY = "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk";
+
+      if (API_KEY === "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk") {
+        // Fallback to static mock if API key is not provided yet
+        setTimeout(() => {
+          let match = procedures["access cavity"]; // Default
+          const lowerInput = combinedInput.toLowerCase();
+          if (lowerInput.includes("crown") || lowerInput.includes("prep") || lowerInput.includes("tooth 11")) {
+            match = procedures["crown prep"];
+          } else if (lowerInput.includes("extract") || lowerInput.includes("remove") || lowerInput.includes("caries")) {
+            match = procedures["extraction"];
+          }
+          setOutput(match);
+          setLoading(false);
+        }, 1200);
+        return;
       }
 
-      setOutput(match);
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { response_mime_type: "application/json" }
+        })
+      });
+
+      if (!response.ok) throw new Error("API request failed");
+
+      const result = await response.json();
+      const textResponse = result.candidates[0].content.parts[0].text;
+      const parsedOutput = JSON.parse(textResponse) as Output;
+
+      setOutput(parsedOutput);
+    } catch (error) {
+      console.error("AI Generation Error:", error);
+      // Fallback in case of error
+      setOutput(procedures["access cavity"]);
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   return (
@@ -276,8 +322,8 @@ const AIEngine = () => {
             <View style={styles.gridItem}>
               <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Clinical Symptoms</Text>
-                <TextInput 
-                  placeholder="e.g. Sharp pain, sensitivity..." 
+                <TextInput
+                  placeholder="e.g. Sharp pain, sensitivity..."
                   style={styles.smallInput}
                   value={symptoms}
                   onChangeText={setSymptoms}
@@ -288,8 +334,8 @@ const AIEngine = () => {
             <View style={styles.gridItem}>
               <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Current Procedure</Text>
-                <TextInput 
-                  placeholder="e.g. RCT Stage 2, Prep..." 
+                <TextInput
+                  placeholder="e.g. RCT Stage 2, Prep..."
                   style={styles.smallInput}
                   value={stage}
                   onChangeText={setStage}
@@ -304,7 +350,7 @@ const AIEngine = () => {
               <Text style={styles.inputLabel}>Observations & Thoughts</Text>
               <View style={styles.headerActions}>
                 {(input.length > 0 || symptoms.length > 0 || stage.length > 0) && (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.clearButton}
                     onPress={() => {
                       setInput("");
@@ -318,7 +364,7 @@ const AIEngine = () => {
                   </TouchableOpacity>
                 )}
                 {browserSupportsSpeechRecognition && (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
                     onPress={handleToggleVoice}
                   >
