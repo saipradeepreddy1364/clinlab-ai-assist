@@ -26,7 +26,7 @@ export default async function handler(req: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: "application/json" }
+        generationConfig: { responseMimeType: "application/json" }
       }),
       signal: controller.signal
     });
