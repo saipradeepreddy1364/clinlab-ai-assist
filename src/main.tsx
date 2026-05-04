@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { AppRegistry, Platform } from "react-native";
 
 // Shim for LegacyEventEmitter which is missing in some expo-notifications web builds
