@@ -236,14 +236,25 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
       if (!response.ok) throw new Error("API request failed");
 
       const result = await response.json();
-      const textResponse = result.candidates[0].content.parts[0].text;
+      let textResponse = result.candidates[0].content.parts[0].text;
+      
+      // Clean up markdown formatting if Gemini returns it inside code blocks
+      textResponse = textResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
       const parsedOutput = JSON.parse(textResponse) as Output;
 
       setOutput(parsedOutput);
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Generation Error:", error);
-      // Fallback in case of error
-      setOutput(procedures["access cavity"]);
+      // Show actual error instead of static fallback
+      setOutput({
+        diagnosis: "API Error: Could not generate insights",
+        confidence: "Low",
+        steps: ["Check your network connection", "Ensure the Gemini API key is valid", "Try rewording your prompt", error.message || "Unknown error occurred"],
+        instruments: ["N/A"],
+        materials: ["N/A"],
+        alerts: ["The AI generation failed. Please try again."]
+      });
     } finally {
       setLoading(false);
     }
