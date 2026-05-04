@@ -208,23 +208,7 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                       import.meta.env.EXPO_PUBLIC_GEMINI_API_KEY ||
                       "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk"; 
       
-      if (!API_KEY || API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
-        // Fallback to static mock if API key is not provided yet
-        setTimeout(() => {
-          let match = procedures["access cavity"]; // Default
-          const lowerInput = combinedInput.toLowerCase();
-          if (lowerInput.includes("crown") || lowerInput.includes("prep") || lowerInput.includes("tooth 11")) {
-            match = procedures["crown prep"];
-          } else if (lowerInput.includes("extract") || lowerInput.includes("remove") || lowerInput.includes("caries")) {
-            match = procedures["extraction"];
-          }
-          setOutput(match);
-          setLoading(false);
-        }, 1200);
-        return;
-      }
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
