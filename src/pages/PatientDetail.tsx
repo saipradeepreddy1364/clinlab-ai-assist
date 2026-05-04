@@ -187,6 +187,19 @@ const PatientDetail = () => {
     }
   };
 
+  const handleDeleteFile = async (filePath: string) => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Are you sure you want to delete this file?')) return;
+    }
+    const { error } = await supabase.storage.from('clinical-files').remove([filePath]);
+    if (error) {
+      alert('Delete failed: ' + error.message);
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await fetchFiles(user.id, patient.patient_name);
+    }
+  };
+
   const renderTimeline = () => {
     const dynamicTimeline = getDynamicTimeline(patient);
     return (
