@@ -86,8 +86,10 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "react-native/Libraries/Utilities/codegenNativeComponent": path.resolve(__dirname, "./src/lib/codegenShim.ts"),
       "react-native/Libraries/Renderer/shims/ReactNative": path.resolve(__dirname, "./src/lib/reactNativeShim.ts"),
+      "react-native/Libraries/Renderer/shims/ReactNativeViewConfigRegistry": path.resolve(__dirname, "./src/lib/reactNativeViewConfigShim.ts"),
       "react-native-web/Libraries/Utilities/codegenNativeComponent": path.resolve(__dirname, "./src/lib/codegenShim.ts"),
       "react-native-web/Libraries/Renderer/shims/ReactNative": path.resolve(__dirname, "./src/lib/reactNativeShim.ts"),
+      "react-native-web/Libraries/Renderer/shims/ReactNativeViewConfigRegistry": path.resolve(__dirname, "./src/lib/reactNativeViewConfigShim.ts"),
       "@": path.resolve(__dirname, "./src"),
       "react-native": "react-native-web",
     },
