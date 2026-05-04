@@ -44,8 +44,12 @@
     "@types/react": "~18.2.79",
     "@types/react-native": "^0.72.8",
     "@vitejs/plugin-react-swc": "^4.3.0",
+    "autoprefixer": "^10.4.19",
     "lovable-tagger": "^1.2.0",
     "path-browserify": "^1.0.1",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.3.3",
     "vite": "^7.3.2",
     "vite-plugin-pwa": "^1.2.0"
