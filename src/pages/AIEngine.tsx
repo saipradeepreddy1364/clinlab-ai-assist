@@ -217,7 +217,15 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
         })
       });
 
-      if (!response.ok) throw new Error("API request failed");
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMsg = errorText;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.error && parsed.error.message) errorMsg = parsed.error.message;
+        } catch(e) {}
+        throw new Error(`API Error: ${errorMsg}`);
+      }
 
       const result = await response.json();
       let textResponse = result.candidates[0].content.parts[0].text;
