@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Platform } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import {
   FileText,
   Sparkles,
@@ -51,7 +51,7 @@ const PatientDetail = () => {
   const navigation = useRef<any>(null);
   
   // Use React Navigation's useNavigation hook
-  const nav = require("@react-navigation/native").useNavigation();
+  const nav = useNavigation<any>();
 
   const fetchFiles = async (doctorId: string, patientName: string) => {
     const { data: storageFiles } = await supabase.storage

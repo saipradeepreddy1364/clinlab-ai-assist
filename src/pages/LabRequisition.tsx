@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, ActivityIndicator } from "react-native";
 import { Download, Printer, Send, ClipboardList } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
@@ -215,7 +215,7 @@ const LabRequisition = () => {
             disabled={loading}
           >
             {loading ? (
-              <require("react-native").ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
                 <Send size={16} color="#FFFFFF" />
