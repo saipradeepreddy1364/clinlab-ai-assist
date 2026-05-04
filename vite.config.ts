@@ -84,12 +84,12 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "react-native": "react-native-web",
       "react-native/Libraries/Utilities/codegenNativeComponent": "react-native-web/dist/exports/createElement",
       "react-native/Libraries/Renderer/shims/ReactNative": "react-native-web/dist/index",
       "react-native-web/Libraries/Utilities/codegenNativeComponent": "react-native-web/dist/exports/createElement",
       "react-native-web/Libraries/Renderer/shims/ReactNative": "react-native-web/dist/index",
+      "@": path.resolve(__dirname, "./src"),
+      "react-native": "react-native-web",
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
