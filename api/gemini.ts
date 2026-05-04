@@ -11,11 +11,15 @@ export default async function handler(req: Request) {
     const body = await req.json();
     const prompt = body.prompt;
 
+    // @ts-ignore - Vercel injects process.env at runtime, but frontend tsconfig doesn't know about it
     const API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
     if (!API_KEY) {
       return new Response(JSON.stringify({ error: { message: "Server is missing Gemini API key" } }), { status: 500 });
     }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
       method: "POST",
@@ -23,8 +27,11 @@ export default async function handler(req: Request) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { response_mime_type: "application/json" }
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
