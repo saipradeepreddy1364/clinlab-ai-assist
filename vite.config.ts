@@ -83,6 +83,7 @@ export default defineConfig(({ mode }) => ({
     })
   ].filter(Boolean),
   resolve: {
+    extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js'],
     alias: {
       "react-native/Libraries/Utilities/codegenNativeComponent": path.resolve(__dirname, "./src/lib/codegenShim.ts"),
       "react-native/Libraries/Renderer/shims/ReactNative": path.resolve(__dirname, "./src/lib/reactNativeShim.ts"),
