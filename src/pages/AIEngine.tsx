@@ -204,8 +204,8 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
 }`;
 
       // Support for both Vite (web) and Expo (mobile) environment variable formats
-      const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-                      (import.meta as any).env?.EXPO_PUBLIC_GEMINI_API_KEY ||
+      const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 
+                      import.meta.env.EXPO_PUBLIC_GEMINI_API_KEY ||
                       "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk"; 
       
       if (!API_KEY || API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
