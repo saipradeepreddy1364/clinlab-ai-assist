@@ -84,8 +84,8 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "react-native/Libraries/Utilities/codegenNativeComponent": "react-native-web/dist/exports/createElement",
-      "react-native-web/Libraries/Utilities/codegenNativeComponent": "react-native-web/dist/exports/createElement",
+      "react-native/Libraries/Utilities/codegenNativeComponent": path.resolve(__dirname, "./src/lib/codegenShim.ts"),
+      "react-native-web/Libraries/Utilities/codegenNativeComponent": path.resolve(__dirname, "./src/lib/codegenShim.ts"),
       "@": path.resolve(__dirname, "./src"),
       "react-native": "react-native-web",
     },
