@@ -11,21 +11,38 @@ export default async function handler(req: Request) {
     const body = await req.json();
     const prompt = body.prompt;
 
-    // @ts-ignore - Vercel injects process.env at runtime, but frontend tsconfig doesn't know about it
-    const API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    // Use GROQ_API_KEY from environment
+    // @ts-ignore
+    const API_KEY = process.env.GROQ_API_KEY;
 
     if (!API_KEY) {
-      return new Response(JSON.stringify({ error: { message: "Server is missing Gemini API key" } }), { status: 500 });
+      return new Response(JSON.stringify({ error: { message: "Server is missing Groq API key" } }), { status: 500 });
     }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`, {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: "You are a clinical AI assistant for dental professionals. You must respond strictly in JSON format."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_tokens: 2048
       }),
       signal: controller.signal
     });
@@ -33,17 +50,31 @@ export default async function handler(req: Request) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      let errorMsg = errorText;
-      try {
-        const parsed = JSON.parse(errorText);
-        if (parsed.error && parsed.error.message) errorMsg = parsed.error.message;
-      } catch(e) {}
-      return new Response(JSON.stringify({ error: { message: errorMsg } }), { status: response.status });
+      const errorData = await response.json();
+      return new Response(JSON.stringify({ error: { message: errorData.error?.message || "Groq API error" } }), { status: response.status });
     }
 
     const result = await response.json();
-    return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    
+    // Transform Groq's OpenAI-style response back to the format the frontend expects (Gemini style)
+    const normalizedResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: result.choices[0].message.content
+              }
+            ]
+          }
+        }
+      ]
+    };
+
+    return new Response(JSON.stringify(normalizedResponse), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
 
   } catch (error: any) {
     console.error("Server API Error:", error);
