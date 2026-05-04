@@ -25,7 +25,7 @@ const NewCase = () => {
     tooth_number: "",
     chief_complaint: "",
     notes: "",
-    case_type: "active",
+    case_type: "new-checkup", // Changed default to something specific
   });
   
   React.useEffect(() => {
@@ -69,9 +69,12 @@ const NewCase = () => {
         const { error } = await supabase.from('cases').insert([
           {
             patient_name: formData.patient_name,
+            age: parseInt(formData.age) || 0,
+            gender: formData.gender,
             tooth_number: formData.tooth_number,
             diagnosis: formData.chief_complaint,
-            status: formData.case_type === "lab" ? "lab-sent" : formData.case_type === "checkup" ? "checkup" : "in-progress",
+            notes: formData.notes,
+            status: formData.case_type === "lab" ? "lab-pending" : formData.case_type === "new-checkup" ? "checkup-pending" : "in-progress",
             is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"),
             doctor_id: user.id,
             doctor_name: profile?.full_name || user.user_metadata.full_name,
@@ -101,11 +104,32 @@ const NewCase = () => {
               <Text style={styles.label}>Patient name</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Priya Sharma"
+                placeholder="Enter patient full name"
                 value={formData.patient_name}
                 onChangeText={(v) => setFormData({ ...formData, patient_name: v })}
                 placeholderTextColor="#94A3B8"
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Case Type</Text>
+              <View style={styles.typeRow}>
+                {[
+                  { id: "new-checkup", label: "Checkup", icon: Stethoscope },
+                  { id: "active", label: "General", icon: ClipboardList },
+                ].map((t) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    onPress={() => setFormData({ ...formData, case_type: t.id })}
+                    style={[styles.typeButton, formData.case_type === t.id && styles.typeButtonActive]}
+                  >
+                    <t.icon size={16} color={formData.case_type === t.id ? "#FFFFFF" : "#64748B"} />
+                    <Text style={[styles.typeButtonText, formData.case_type === t.id && styles.typeButtonTextActive]}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             <View style={styles.grid}>
@@ -113,7 +137,7 @@ const NewCase = () => {
                 <Text style={styles.label}>Age</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="32"
+                  placeholder="Yrs"
                   value={formData.age}
                   onChangeText={(v) => setFormData({ ...formData, age: v })}
                   keyboardType="numeric"
@@ -139,7 +163,7 @@ const NewCase = () => {
               <Text style={styles.label}>Tooth number (FDI)</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. 36"
+                placeholder="e.g. 11, 24, 36"
                 value={formData.tooth_number}
                 onChangeText={(v) => setFormData({ ...formData, tooth_number: v })}
                 placeholderTextColor="#94A3B8"
@@ -150,7 +174,7 @@ const NewCase = () => {
               <Text style={styles.label}>Chief complaint</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Severe pain on chewing"
+                placeholder="Describe patient's primary issue"
                 value={formData.chief_complaint}
                 onChangeText={(v) => setFormData({ ...formData, chief_complaint: v })}
                 placeholderTextColor="#94A3B8"
@@ -181,7 +205,7 @@ const NewCase = () => {
             <Text style={styles.cardTitle}>Clinical notes</Text>
             <TextInput
               style={styles.textarea}
-              placeholder="e.g. Spontaneous throbbing pain, lingering response to cold test on 36. Tender on percussion. No swelling."
+              placeholder="Add detailed clinical findings, response to tests, or specific treatment plans..."
               multiline
               value={formData.notes}
               onChangeText={(v) => setFormData({ ...formData, notes: v })}
@@ -310,6 +334,34 @@ const styles = StyleSheet.create({
   selectValue: {
     fontSize: 14,
     color: "#0F172A",
+  },
+  typeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  typeButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+    gap: 8,
+  },
+  typeButtonActive: {
+    backgroundColor: "#0EA5E9",
+    borderColor: "#0EA5E9",
+  },
+  typeButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  typeButtonTextActive: {
+    color: "#FFFFFF",
   },
   symptomsGrid: {
     flexDirection: "row",

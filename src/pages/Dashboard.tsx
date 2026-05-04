@@ -104,8 +104,8 @@ const Dashboard = () => {
           })));
           setStats({
             active: cases.filter(c => c.status === 'in-progress').length,
-            lab: cases.filter(c => c.status === 'lab-sent').length,
-            checkup: cases.filter(c => c.status === 'checkup').length,
+            lab: cases.filter(c => c.status === 'lab-pending' || c.status === 'lab-received').length,
+            checkup: cases.filter(c => c.status === 'checkup-pending').length,
             totalDoctors: 0,
           });
         }

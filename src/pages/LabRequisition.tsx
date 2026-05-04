@@ -16,34 +16,73 @@ const labOptions = [
 
 const LabRequisition = () => {
   const navigation = useNavigation<any>();
+  const route = require("@react-navigation/native").useRoute();
+  const caseId = route.params?.caseId;
+  
+  const [loading, setLoading] = useState(!!caseId);
   const [selected, setSelected] = useState<string[]>(["crown"]);
+  const [patientData, setPatientData] = useState<any>({
+    patient_name: "",
+    age: "",
+    gender: "",
+    tooth_number: "",
+    diagnosis: "",
+  });
+  const [labDetails, setLabDetails] = useState({
+    material: "PFM (Porcelain-fused-to-metal)",
+    shade: "A2 (Vita)",
+    margin: "Chamfer",
+    instructions: ""
+  });
   const [dentistName, setDentistName] = useState("Doctor");
   
   const toggle = (id: string) =>
     setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
+        setDentistName(user.user_metadata?.full_name || "Doctor");
+      }
+
+      if (caseId) {
+        setLoading(true);
+        const { data: caseData } = await supabase
+          .from('cases')
+          .select('*')
+          .eq('id', caseId)
           .single();
         
-        if (profile?.role === 'organization') {
-          navigation.navigate("OrgDashboard");
-          return;
+        if (caseData) {
+          setPatientData(caseData);
         }
-
-        if (user.user_metadata?.full_name) {
-          setDentistName(user.user_metadata.full_name);
-        }
+        setLoading(false);
       }
     };
-    fetchUser();
-  }, [navigation]);
+    fetchData();
+  }, [caseId]);
+
+  const handleSendToLab = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('cases')
+        .update({ 
+          status: 'lab-pending',
+          notes: (patientData.notes || "") + `\n\n[LAB REQUESTED - ${new Date().toLocaleDateString()}]\nWork: ${selected.join(", ")}\nMaterial: ${labDetails.material}\nShade: ${labDetails.shade}`
+        })
+        .eq('id', caseId || patientData.id);
+
+      if (error) throw error;
+      alert("Lab requisition sent successfully!");
+      navigation.goBack();
+    } catch (error: any) {
+      alert("Failed to send to lab: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -52,8 +91,8 @@ const LabRequisition = () => {
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.reqNumber}>Lab requisition #LR-2041</Text>
-            <Text style={styles.cardTitle}>Crown — Tooth 36</Text>
+            <Text style={styles.reqNumber}>Lab requisition #{caseId ? caseId.slice(0, 8).toUpperCase() : 'NEW'}</Text>
+            <Text style={styles.cardTitle}>{selected.join(" & ") || "New Request"} — Tooth {patientData.tooth_number || "XX"}</Text>
             <View style={styles.headerMeta}>
               <Text style={styles.metaText}>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
               <Text style={styles.metaText}>Return: 5–7 days</Text>
@@ -63,17 +102,17 @@ const LabRequisition = () => {
           <View style={styles.cardBody}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Patient name</Text>
-              <TextInput style={styles.input} defaultValue="Priya Sharma" placeholderTextColor="#94A3B8" />
+              <TextInput style={styles.input} value={patientData.patient_name} editable={false} placeholder="Patient name" />
             </View>
 
             <View style={styles.grid}>
               <View style={styles.gridItem}>
                 <Text style={styles.label}>Age</Text>
-                <TextInput style={styles.input} defaultValue="32" keyboardType="numeric" placeholderTextColor="#94A3B8" />
+                <TextInput style={styles.input} value={String(patientData.age || "")} editable={false} placeholder="Age" />
               </View>
               <View style={styles.gridItem}>
                 <Text style={styles.label}>Gender</Text>
-                <TextInput style={styles.input} defaultValue="Female" placeholderTextColor="#94A3B8" />
+                <TextInput style={styles.input} value={patientData.gender} editable={false} placeholder="Gender" />
               </View>
             </View>
 
@@ -89,12 +128,12 @@ const LabRequisition = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tooth number (FDI)</Text>
-              <TextInput style={styles.input} defaultValue="36" placeholderTextColor="#94A3B8" />
+              <TextInput style={styles.input} value={patientData.tooth_number} editable={false} placeholder="XX" />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Diagnosis</Text>
-              <TextInput style={styles.input} defaultValue="Irreversible pulpitis — RCT completed, crown indicated" placeholderTextColor="#94A3B8" />
+              <Text style={styles.label}>Diagnosis / Indication</Text>
+              <TextInput style={styles.input} value={patientData.diagnosis} editable={false} multiline placeholder="Primary diagnosis" />
             </View>
 
             <View style={styles.selectionGroup}>
@@ -117,17 +156,32 @@ const LabRequisition = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Material</Text>
-              <TextInput style={styles.input} defaultValue="PFM (Porcelain-fused-to-metal)" placeholderTextColor="#94A3B8" />
+              <TextInput 
+                style={styles.input} 
+                value={labDetails.material}
+                onChangeText={(v) => setLabDetails({...labDetails, material: v})}
+                placeholder="Enter material (e.g. Zirconia)" 
+              />
             </View>
 
             <View style={styles.grid}>
               <View style={styles.gridItem}>
                 <Text style={styles.label}>Shade</Text>
-                <TextInput style={styles.input} defaultValue="A2 (Vita)" placeholderTextColor="#94A3B8" />
+                <TextInput 
+                  style={styles.input} 
+                  value={labDetails.shade}
+                  onChangeText={(v) => setLabDetails({...labDetails, shade: v})}
+                  placeholder="e.g. A2" 
+                />
               </View>
               <View style={styles.gridItem}>
                 <Text style={styles.label}>Margin</Text>
-                <TextInput style={styles.input} defaultValue="Chamfer" placeholderTextColor="#94A3B8" />
+                <TextInput 
+                  style={styles.input} 
+                  value={labDetails.margin}
+                  onChangeText={(v) => setLabDetails({...labDetails, margin: v})}
+                  placeholder="e.g. Chamfer" 
+                />
               </View>
             </View>
 
@@ -135,9 +189,10 @@ const LabRequisition = () => {
               <Text style={styles.label}>Special instructions</Text>
               <TextInput
                 style={styles.textarea}
-                defaultValue="Please match cervical translucency. Contact for shade verification before bake."
+                value={labDetails.instructions}
+                onChangeText={(v) => setLabDetails({...labDetails, instructions: v})}
+                placeholder="Match translucency, specific contact notes, etc."
                 multiline
-                placeholderTextColor="#94A3B8"
               />
             </View>
           </View>
@@ -154,9 +209,19 @@ const LabRequisition = () => {
               <Text style={styles.secondaryButtonText}>Print</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.primaryButton}>
-            <Send size={16} color="#FFFFFF" />
-            <Text style={styles.primaryButtonText}>Send to lab</Text>
+          <TouchableOpacity 
+            style={[styles.primaryButton, loading && { opacity: 0.7 }]}
+            onPress={handleSendToLab}
+            disabled={loading}
+          >
+            {loading ? (
+              <require("react-native").ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Send size={16} color="#FFFFFF" />
+                <Text style={styles.primaryButtonText}>Send to lab</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </View>

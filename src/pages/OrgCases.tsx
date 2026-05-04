@@ -75,8 +75,22 @@ const OrgCases = () => {
                 <View style={styles.cardContent}>
                   <View style={styles.row}>
                     <Text style={styles.patientName}>{c.patient_name}</Text>
-                    <View style={[styles.badge, { backgroundColor: c.status === 'in-progress' ? "#E0F2FE" : "#F1F5F9" }]}>
-                      <Text style={[styles.badgeText, { color: c.status === 'in-progress' ? "#0369A1" : "#475569" }]}>
+                    <View style={[
+                      styles.badge, 
+                      { backgroundColor: 
+                        c.status === 'in-progress' ? "#E0F2FE" : 
+                        c.status.includes('lab') ? "#F5F3FF" :
+                        c.status.includes('checkup') ? "#ECFDF5" : "#F1F5F9" 
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.badgeText, 
+                        { color: 
+                          c.status === 'in-progress' ? "#0369A1" : 
+                          c.status.includes('lab') ? "#6D28D9" :
+                          c.status.includes('checkup') ? "#059669" : "#475569" 
+                        }
+                      ]}>
                         {c.status.replace('-', ' ')}
                       </Text>
                     </View>

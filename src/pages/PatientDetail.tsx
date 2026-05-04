@@ -18,13 +18,26 @@ import {
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
-const timeline = [
-  { date: "24 Apr 2026", title: "Diagnosis confirmed", desc: "Irreversible Pulpitis · Tooth 36", done: true, type: "diagnosis" },
-  { date: "24 Apr 2026", title: "Access cavity completed", desc: "Rubber dam placed, MB/ML/DB/DL canals located", done: true, type: "step" },
-  { date: "24 Apr 2026", title: "Lab requisition sent", desc: "Crown — PFM, Shade A2, Chamfer margin", done: true, type: "lab" },
-  { date: "01 May 2026", title: "Crown try-in", desc: "Scheduled · check fit, occlusion, contacts", done: false, type: "follow" },
-  { date: "08 May 2026", title: "Permanent cementation", desc: "Resin cement (RelyX) — final review", done: false, type: "follow" },
-];
+// Helper to generate dynamic timeline based on status
+const getDynamicTimeline = (patient: any) => {
+  const t = [
+    { date: new Date(patient.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), title: "Case Created", desc: `${patient.diagnosis || 'Clinical entry initiated'}`, done: true, type: "diagnosis" },
+  ];
+
+  if (patient.status === 'lab-pending' || patient.status === 'lab-received' || patient.status === 'completed') {
+    t.push({ date: "In Progress", title: "Lab Requisition", desc: "Crown/Prosthesis fabrication requested", done: patient.status !== 'lab-pending', type: "lab" });
+  }
+
+  if (patient.status === 'checkup-pending' || patient.status === 'completed') {
+    t.push({ date: "Follow-up", title: "Final Checkup", desc: "Clinical review and cementation", done: patient.status === 'completed', type: "follow" });
+  }
+
+  if (patient.status === 'completed') {
+    t.push({ date: "Finished", title: "Treatment Completed", desc: "Case closed successfully", done: true, type: "step" });
+  }
+
+  return t;
+};
 
 const PatientDetail = () => {
   const route = useRoute<any>();
@@ -34,7 +47,11 @@ const PatientDetail = () => {
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<any>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const navigation = useRef<any>(null);
+  
+  // Use React Navigation's useNavigation hook
+  const nav = require("@react-navigation/native").useNavigation();
 
   const fetchFiles = async (doctorId: string, patientName: string) => {
     const { data: storageFiles } = await supabase.storage
@@ -151,49 +168,60 @@ const PatientDetail = () => {
     }
   };
 
-  const handleDeleteFile = async (filePath: string) => {
-    if (!window.confirm('Are you sure you want to delete this file?')) return;
-    const { error } = await supabase.storage.from('clinical-files').remove([filePath]);
-    if (error) {
-      alert('Delete failed: ' + error.message);
-    } else {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) await fetchFiles(user.id, patient.patient_name);
+  const handleStatusUpdate = async (newStatus: string) => {
+    try {
+      setActionLoading(true);
+      const { error } = await supabase
+        .from('cases')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setPatient({ ...patient, status: newStatus });
+      alert(`Patient journey moved to: ${newStatus.replace('-', ' ')}`);
+    } catch (error: any) {
+      alert("Status update failed: " + error.message);
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const renderTimeline = () => (
-    <View style={styles.card}>
-      <View style={styles.timelineContainer}>
-        <View style={styles.timelineLine} />
-        {timeline.map((t, i) => (
-          <View key={i} style={styles.timelineItem}>
-            <View style={styles.timelineIconBox}>
-              {t.done ? (
-                <View style={styles.doneIcon}>
-                  <CheckCircle2 size={16} color="#FFFFFF" />
-                </View>
-              ) : (
-                <View style={styles.todoIcon}>
-                  <Circle size={12} color="#CBD5E1" />
-                </View>
-              )}
-            </View>
-            <View style={styles.timelineContent}>
-              <View style={styles.timelineHeader}>
-                <Text style={styles.timelineTitle}>{t.title}</Text>
-                <View style={styles.dateBadge}>
-                  <Calendar size={10} color="#64748B" />
-                  <Text style={styles.dateText}>{t.date}</Text>
-                </View>
+  const renderTimeline = () => {
+    const dynamicTimeline = getDynamicTimeline(patient);
+    return (
+      <View style={styles.card}>
+        <View style={styles.timelineContainer}>
+          <View style={styles.timelineLine} />
+          {dynamicTimeline.map((t, i) => (
+            <View key={i} style={styles.timelineItem}>
+              <View style={styles.timelineIconBox}>
+                {t.done ? (
+                  <View style={styles.doneIcon}>
+                    <CheckCircle2 size={16} color="#FFFFFF" />
+                  </View>
+                ) : (
+                  <View style={styles.todoIcon}>
+                    <Circle size={12} color="#CBD5E1" />
+                  </View>
+                )}
               </View>
-              <Text style={styles.timelineDesc}>{t.desc}</Text>
+              <View style={styles.timelineContent}>
+                <View style={styles.timelineHeader}>
+                  <Text style={styles.timelineTitle}>{t.title}</Text>
+                  <View style={styles.dateBadge}>
+                    <Calendar size={10} color="#64748B" />
+                    <Text style={styles.dateText}>{t.date}</Text>
+                  </View>
+                </View>
+                <Text style={styles.timelineDesc}>{t.desc}</Text>
+              </View>
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderNotes = () => (
     <View style={styles.card}>
@@ -202,9 +230,7 @@ const PatientDetail = () => {
         <Text style={styles.cardHeaderTitle}>Clinical notes</Text>
       </View>
       <Text style={styles.notesText}>
-        Patient reports spontaneous throbbing pain on left mandibular region for 3 days. Lingering response to cold
-        test on tooth 36. Tender on percussion. No swelling. IOPA shows deep caries approaching pulp horn.
-        Diagnosis: Irreversible Pulpitis. Plan: RCT followed by crown.
+        {patient.notes || "No additional clinical notes captured for this visit."}
       </Text>
     </View>
   );
@@ -218,15 +244,11 @@ const PatientDetail = () => {
       <View style={styles.aiList}>
         <View style={styles.aiItem}>
           <Text style={styles.aiDot}>→</Text>
-          <Text style={styles.aiText}>Establish glide path with #10 K-file</Text>
+          <Text style={styles.aiText}>Review patient history for similar issues</Text>
         </View>
         <View style={styles.aiItem}>
           <Text style={styles.aiDot}>→</Text>
-          <Text style={styles.aiText}>Use 3% NaOCl irrigation between files</Text>
-        </View>
-        <View style={styles.aiItem}>
-          <Text style={styles.aiDot}>→</Text>
-          <Text style={styles.aiText}>Confirm WL with apex locator + IOPA</Text>
+          <Text style={styles.aiText}>Use AI Engine for real-time procedure guidance</Text>
         </View>
       </View>
     </View>
@@ -312,14 +334,14 @@ const PatientDetail = () => {
         </View>
 
         <View style={styles.tabBar}>
-          {["timeline", "notes", "ai", "files"].map((tab) => (
+          {["timeline", "actions", "notes", "ai", "files"].map((tab) => (
             <TouchableOpacity 
               key={tab}
               onPress={() => setActiveTab(tab)}
               style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'ai' ? 'AI' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -327,6 +349,38 @@ const PatientDetail = () => {
 
         <View style={styles.content}>
           {activeTab === "timeline" && renderTimeline()}
+          {activeTab === "actions" && (
+            <View style={styles.card}>
+              <Text style={styles.cardHeaderTitle}>Action Center</Text>
+              <Text style={styles.actionDesc}>Manage patient treatment lifecycle</Text>
+              
+              <View style={styles.actionGrid}>
+                <TouchableOpacity 
+                  style={[styles.actionBtn, patient.status === 'lab-pending' && styles.actionBtnActive]}
+                  onPress={() => nav.navigate("LabRequisition", { caseId: patient.id })}
+                >
+                  <ClipboardList size={20} color={patient.status === 'lab-pending' ? "#FFFFFF" : "#0EA5E9"} />
+                  <Text style={[styles.actionBtnLabel, patient.status === 'lab-pending' && styles.actionBtnLabelActive]}>Request Lab</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.actionBtn, patient.status === 'checkup-pending' && styles.actionBtnActive]}
+                  onPress={() => handleStatusUpdate('checkup-pending')}
+                >
+                  <Calendar size={20} color={patient.status === 'checkup-pending' ? "#FFFFFF" : "#8B5CF6"} />
+                  <Text style={[styles.actionBtnLabel, patient.status === 'checkup-pending' && styles.actionBtnLabelActive]}>Set Checkup</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.actionBtn, patient.status === 'completed' && styles.actionBtnActive]}
+                  onPress={() => handleStatusUpdate('completed')}
+                >
+                  <CheckCircle2 size={20} color={patient.status === 'completed' ? "#FFFFFF" : "#22C55E"} />
+                  <Text style={[styles.actionBtnLabel, patient.status === 'completed' && styles.actionBtnLabelActive]}>Complete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
           {activeTab === "notes" && renderNotes()}
           {activeTab === "ai" && renderAI()}
           {activeTab === "files" && renderFiles()}
@@ -636,6 +690,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 4,
+  },
+  actionDesc: {
+    fontSize: 12,
+    color: "#64748B",
+    marginBottom: 16,
+  },
+  actionGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  actionBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+    gap: 8,
+  },
+  actionBtnActive: {
+    backgroundColor: "#0EA5E9",
+    borderColor: "#0EA5E9",
+  },
+  actionBtnLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  actionBtnLabelActive: {
+    color: "#FFFFFF",
   },
 });
 
