@@ -118,7 +118,13 @@
     @apply border-border;
   }
   html, body, #root {
-    @apply h-full overflow-hidden;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   body {
     @apply bg-background text-foreground antialiased;
