@@ -21,6 +21,7 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [authType, setAuthType] = useState<"doctor" | "organization">("doctor");
   const [organizations, setOrganizations] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [roleModalVisible, setRoleModalVisible] = useState(false);
   const [orgModalVisible, setOrgModalVisible] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -459,12 +460,24 @@ const Signup = () => {
       </Modal>
 
       <Modal visible={orgModalVisible} transparent animationType="slide">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setOrgModalVisible(false)}>
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => { setOrgModalVisible(false); setSearchQuery(""); }}>
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <Text style={styles.modalHeader}>Registered Organizations</Text>
+            
+            <View style={styles.searchContainer}>
+              <Search size={18} color="#94A3B8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search clinic name..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+
             <View style={styles.diagBox}>
               <Text style={styles.diagText}>Database Status: {organizations.length > 0 ? "Connected" : "Searching..."}</Text>
-              <Text style={styles.diagText}>Registered Orgs Found: {organizations.length}</Text>
+              <Text style={styles.diagText}>Matches Found: {organizations.filter(o => o.full_name?.toLowerCase().includes(searchQuery.toLowerCase())).length}</Text>
             </View>
             <TouchableOpacity 
               style={styles.refreshBtn} 
@@ -477,33 +490,38 @@ const Signup = () => {
             >
               <Text style={styles.refreshBtnText}>Refresh from Supabase</Text>
             </TouchableOpacity>
-            <ScrollView 
-              style={{ maxHeight: 400 }}
-              nestedScrollEnabled={true}
-              keyboardShouldPersistTaps="handled"
-              scrollEventThrottle={16}
-            >
-              {organizations.length > 0 ? (
-                organizations.map(org => (
-                  <TouchableOpacity 
-                    key={org.id} 
-                    style={styles.modalOption}
-                    onPress={() => {
-                      setFormData({ ...formData, organization: { id: org.id, name: org.full_name } });
-                      setOrgModalVisible(false);
-                    }}
-                  >
-                    <Text style={styles.modalOptionText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>{org.full_name}</Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.emptyState}>
-                  <Text style={styles.noData}>No organizations found in Supabase.</Text>
-                  <Text style={styles.hintText}>Make sure your clinic has registered as an "Organization" first.</Text>
-                </View>
-              )}
-            </ScrollView>
-          </TouchableOpacity>
+            <View style={{ maxHeight: 400 }}>
+              <ScrollView 
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                scrollEventThrottle={16}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+                {organizations.length > 0 ? (
+                  organizations
+                    .filter(org => org.full_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map(org => (
+                      <TouchableOpacity 
+                        key={org.id} 
+                        style={styles.modalOption}
+                        onPress={() => {
+                          setFormData({ ...formData, organization: { id: org.id, name: org.full_name } });
+                          setOrgModalVisible(false);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <Text style={styles.modalOptionText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>{org.full_name}</Text>
+                      </TouchableOpacity>
+                    ))
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.noData}>No organizations found in Supabase.</Text>
+                    <Text style={styles.hintText}>Make sure your clinic has registered as an "Organization" first.</Text>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          </View>
         </TouchableOpacity>
       </Modal>
       <Modal visible={verifyModalVisible} transparent animationType="fade">
@@ -773,6 +791,23 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 20,
     gap: 12,
+    maxHeight: '80%',
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 8,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#0F172A",
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) as any,
   },
   modalHeader: {
     fontSize: 18,
