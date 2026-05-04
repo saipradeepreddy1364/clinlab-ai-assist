@@ -83,6 +83,20 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  useEffect(() => {
+    if (showSuccessPopup) {
+      const timer = setTimeout(() => setShowSuccessPopup(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessPopup]);
+
+  useEffect(() => {
+    if (showRejectedPopup) {
+      const timer = setTimeout(() => setShowRejectedPopup(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showRejectedPopup]);
+
   if (loading) {
     return (
       <View style={styles.splashContainer}>
@@ -111,12 +125,10 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
             The organization has approved your application. You now have full clinical access.
           </Text>
           
-          <TouchableOpacity 
-            style={[styles.logoutButton, { backgroundColor: "#10B981", borderWidth: 0 }]} 
-            onPress={() => setShowSuccessPopup(false)}
-          >
-            <Text style={[styles.logoutText, { color: "#FFFFFF", fontWeight: "600" }]}>Go to Dashboard</Text>
-          </TouchableOpacity>
+          <View style={{ marginTop: 24, alignItems: "center" }}>
+            <ActivityIndicator color="#10B981" />
+            <Text style={{ marginTop: 8, color: "#10B981", fontWeight: "600" }}>Taking you to dashboard...</Text>
+          </View>
         </View>
       </View>
     );
@@ -135,10 +147,10 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
             If you believe this is an error, please contact your clinic manager.
           </Text>
           
-          <TouchableOpacity style={styles.logoutButton} onPress={() => setShowRejectedPopup(false)}>
-            <LogOut size={16} color="#64748B" />
-            <Text style={styles.logoutText}>Back to Sign in</Text>
-          </TouchableOpacity>
+          <View style={{ marginTop: 24, alignItems: "center" }}>
+            <ActivityIndicator color="#EF4444" />
+            <Text style={{ marginTop: 8, color: "#EF4444", fontWeight: "600" }}>Signing out...</Text>
+          </View>
         </View>
       </View>
     );
