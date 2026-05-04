@@ -203,18 +203,11 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
   "alerts": ["Clinical alert 1", ...]
 }`;
 
-      // Support for both Vite (web) and Expo (mobile) environment variable formats
-      const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 
-                      import.meta.env.EXPO_PUBLIC_GEMINI_API_KEY ||
-                      "AIzaSyAzq7Cba8tWV7rOqi8-eQEHGqhuUfvvumk"; 
-      
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+      // Call our secure Vercel backend proxy instead of Google directly
+      const response = await fetch('/api/gemini', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { response_mime_type: "application/json" }
-        })
+        body: JSON.stringify({ prompt })
       });
 
       if (!response.ok) {
