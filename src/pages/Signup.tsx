@@ -678,8 +678,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 24,
     paddingTop: Platform.OS === "ios" ? 20 : 40,
-    paddingBottom: 100, // Extra space at bottom
+    paddingBottom: 250, // Massive space to ensure button is reachable
     gap: 16,
+    flexGrow: 1,
   },
   brand: {
     flexDirection: "row",
