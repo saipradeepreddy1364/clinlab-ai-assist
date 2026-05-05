@@ -270,11 +270,18 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.session) {
-        // Explicitly update the profile to 'approved' now that email is verified
-        await supabase
+        // NOW we add the organization to the public database
+        const { error: profileError } = await supabase
           .from('profiles')
-          .update({ status: 'approved' })
-          .eq('id', data.session.user.id);
+          .insert({
+            id: data.session.user.id,
+            full_name: formData.name,
+            phone: formData.phone,
+            role: 'organization',
+            status: 'approved'
+          });
+
+        if (profileError) throw profileError;
 
         setVerifyModalVisible(false);
         showAlert("Verification Successful", "Your organization is now verified! Welcome to ClinLab.", [
