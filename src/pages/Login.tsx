@@ -92,26 +92,30 @@ const Login = () => {
         return;
       }
       
-      if (data.user) {
-        const { data: profile, error: profileError } = await supabase
+      if (data.session) {
+        const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .maybeSingle();
-        
-        if (profileError) throw profileError;
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
 
-        if (!profile) {
-          showAlert("Profile Missing", "Your authentication is valid, but we couldn't find your clinical profile. Please contact support.");
-          setLoading(false);
+        // 1. Strict Email Verification Check for Organizations
+        if (profile?.role === 'organization' && !data.session.user.email_confirmed_at) {
+          showAlert("Verification Required", "Please verify your email with the OTP code sent to you.");
+          // We can't let them in yet
+          await supabase.auth.signOut();
           return;
         }
-        
-        if (profile.role === 'organization') {
-          navigation.navigate("OrgDashboard");
-        } else {
-          navigation.navigate("Dashboard");
+
+        // 2. Approval Check for Doctors
+        if (profile?.role === 'doctor' && profile.status !== 'approved') {
+          showAlert("Approval Pending", "Your account is waiting for approval from your organization.");
+          await supabase.auth.signOut();
+          return;
         }
+
+        // Success - Navigate to correct dashboard
+        navigation.replace(profile?.role === "organization" ? "OrgDashboard" : "Dashboard");
       }
     } catch (error: any) {
       showAlert("Login Error", error.message);
