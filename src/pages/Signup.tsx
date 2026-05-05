@@ -228,7 +228,8 @@ const Signup = () => {
         // to handle profile creation since the client doesn't have a session yet (due to email confirmation).
 
         if (authType === "doctor") {
-          // Doctors skip OTP, but remain 'pending' for org approval
+          // Doctors remain 'pending' and go directly to the waiting screen
+          setVerifying(false); // Ensure no OTP logic triggers
           setPendingModalVisible(true);
         } else {
           // Organizations MUST verify email via OTP
