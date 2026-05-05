@@ -24,6 +24,17 @@ const ForgotPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Check if we arrived here via a recovery link
+  React.useEffect(() => {
+    const checkRecovery = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && window.location.hash.includes('type=recovery')) {
+        setStep(3);
+      }
+    };
+    if (Platform.OS === 'web') checkRecovery();
+  }, []);
+
   const handleSendOtp = async () => {
     if (!email) {
       showAlert("Error", "Please enter your registered email address.");

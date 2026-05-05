@@ -175,7 +175,12 @@ const Login = () => {
                   style={styles.passwordInput}
                   placeholder="••••••••"
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(v) => {
+                    setPassword(v);
+                    if (v.length === 6 && email.includes("@")) {
+                      handleLogin();
+                    }
+                  }}
                   secureTextEntry={!showPassword}
                   placeholderTextColor="#94A3B8"
                 />

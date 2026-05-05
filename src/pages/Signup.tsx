@@ -416,7 +416,12 @@ const Signup = () => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirm Password</Text>
-            <View style={styles.passwordContainer}>
+            <View style={[
+              styles.passwordContainer, 
+              formData.confirmPassword.length > 0 && 
+              formData.password !== formData.confirmPassword && 
+              { borderColor: '#EF4444', borderWidth: 1.5 }
+            ]}>
               <TextInput
                 style={styles.passwordInput}
                 placeholder="••••••••"
@@ -432,6 +437,11 @@ const Signup = () => {
                 {showConfirmPassword ? <EyeOff size={18} color="#94A3B8" /> : <Eye size={18} color="#94A3B8" />}
               </TouchableOpacity>
             </View>
+            {formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword && (
+              <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '500', marginTop: 4 }}>
+                Passwords do not match yet
+              </Text>
+            )}
           </View>
 
           {authType === "doctor" && (
