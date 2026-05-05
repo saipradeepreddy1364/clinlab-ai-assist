@@ -647,6 +647,22 @@ const Signup = () => {
             </TouchableOpacity>
 
             <TouchableOpacity 
+              onPress={async () => {
+                setLoading(true);
+                const { error } = await supabase.auth.resend({
+                  type: 'signup',
+                  email: formData.email,
+                });
+                setLoading(false);
+                if (error) showAlert("Resend Failed", error.message);
+                else showAlert("Sent!", "A new 6-digit code has been sent to your email.");
+              }}
+              style={{ alignSelf: 'center', padding: 8 }}
+            >
+              <Text style={{ color: '#0EA5E9', fontSize: 14, fontWeight: '600' }}>Resend Code</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
               onPress={handleCancelSignup}
               style={{ alignSelf: 'center', padding: 12 }}
             >
