@@ -295,16 +295,17 @@ const Signup = () => {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <ScrollView 
           ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
-          keyboardShouldPersistTaps="handled"
+          bounces={true}
+          scrollEnabled={true}
+          keyboardShouldPersistTaps="always"
         >
         <View style={styles.hero}>
           <Text style={styles.title}>Create account</Text>
