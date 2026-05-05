@@ -637,7 +637,7 @@ const Signup = () => {
             </View>
             
             <TouchableOpacity 
-              style={[styles.heroButton, { width: '100%', marginBottom: 12 }]} 
+              style={[styles.heroButton, { width: '100%', marginBottom: 16 }]} 
               onPress={handleVerifyOtp}
               disabled={loading}
             >
@@ -659,16 +659,18 @@ const Signup = () => {
                 if (error) showAlert("Resend Failed", error.message);
                 else showAlert("Sent!", "A new 6-digit code has been sent to your email.");
               }}
-              style={{ alignSelf: 'center', padding: 8 }}
+              style={{ alignSelf: 'center', padding: 15, width: '100%', alignItems: 'center' }}
             >
-              <Text style={{ color: '#0EA5E9', fontSize: 14, fontWeight: '600' }}>Resend Code</Text>
+              <Text style={{ color: '#0EA5E9', fontSize: 15, fontWeight: '700', textDecorationLine: 'underline' }}>Resend Verification Code</Text>
             </TouchableOpacity>
+
+            <View style={{ height: 20 }} />
 
             <TouchableOpacity 
               onPress={handleCancelSignup}
-              style={{ alignSelf: 'center', padding: 12 }}
+              style={{ alignSelf: 'center', padding: 10 }}
             >
-              <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>Cancel Registration</Text>
+              <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '600' }}>Cancel Registration</Text>
             </TouchableOpacity>
           </View>
         </View>
