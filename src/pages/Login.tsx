@@ -162,7 +162,7 @@ const Login = () => {
             <View style={styles.inputGroup}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Password</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
                   <Text style={styles.forgotText}>Forgot?</Text>
                 </TouchableOpacity>
               </View>

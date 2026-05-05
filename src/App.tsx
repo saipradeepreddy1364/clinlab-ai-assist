@@ -12,6 +12,7 @@ import SplashScreen from "./pages/SplashScreen";
 import Login from "./pages/Login";
 import DoctorLogin from "./pages/DoctorLogin";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import OrgDashboard from "./pages/OrgDashboard";
 import OrgCases from "./pages/OrgCases";
@@ -54,6 +55,7 @@ const App = () => {
                 <Stack.Screen name="Login" component={Login} />
                 <Stack.Screen name="DoctorLogin" component={DoctorLogin} />
                 <Stack.Screen name="Signup" component={Signup} />
+                <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
                 
                 {/* Authenticated Routes */}
                 <Stack.Screen name="Dashboard" component={Dashboard} />

@@ -27,6 +27,7 @@ const Signup = () => {
   const [verifying, setVerifying] = useState(false);
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [pendingModalVisible, setPendingModalVisible] = useState(false);
+  const [otp, setOtp] = useState("");
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -227,10 +228,10 @@ const Signup = () => {
         // to handle profile creation since the client doesn't have a session yet (due to email confirmation).
 
         if (authType === "doctor") {
-          // Show pending approval modal for doctors
+          // Doctors skip OTP, but remain 'pending' for org approval
           setPendingModalVisible(true);
         } else {
-          // Show verification modal for organizations
+          // Organizations MUST verify email via OTP
           setVerifying(true);
           setVerifyModalVisible(true);
         }
@@ -246,19 +247,33 @@ const Signup = () => {
     }
   };
 
-  const checkVerificationStatus = async () => {
-    setLoading(true);
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (session?.user?.email_confirmed_at) {
-      setVerifyModalVisible(false);
-      showAlert("Verification Successful", "Welcome to ClinLab! Taking you to your dashboard...", [
-        { text: "Let's Go", onPress: () => navigation.replace(authType === "organization" ? "OrgDashboard" : "Dashboard") }
-      ]);
-    } else {
-      showAlert("Not Verified Yet", "We couldn't confirm your verification. Please click the link in your email first.");
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length < 6) {
+      showAlert("Invalid OTP", "Please enter the 6-digit verification code.");
+      return;
     }
-    setLoading(false);
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: formData.email,
+        token: otp,
+        type: 'signup',
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        setVerifyModalVisible(false);
+        showAlert("Verification Successful", "Your organization is now verified! Welcome to ClinLab.", [
+          { text: "Enter Dashboard", onPress: () => navigation.replace("OrgDashboard") }
+        ]);
+      }
+    } catch (error: any) {
+      showAlert("Verification Failed", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -570,20 +585,32 @@ const Signup = () => {
 
             <Text style={[styles.modalHeader, { textAlign: 'center' }]}>Verify Your Email</Text>
             <Text style={{ textAlign: 'center', color: '#64748B', marginBottom: 24, lineHeight: 22, fontSize: 15 }}>
-              We've sent a verification link to{"\n"}
+              We've sent a 6-digit verification code to{"\n"}
               <Text style={{ fontWeight: '700', color: '#0EA5E9' }}>{formData.email}</Text>.{"\n"}
-              Please click the link in your email to continue.
+              Please enter it below to activate your account.
             </Text>
+
+            <View style={styles.otpInputGroup}>
+              <TextInput
+                style={styles.otpInput}
+                placeholder="000000"
+                maxLength={6}
+                keyboardType="number-pad"
+                value={otp}
+                onChangeText={setOtp}
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
             
             <TouchableOpacity 
               style={[styles.heroButton, { width: '100%', marginBottom: 12 }]} 
-              onPress={checkVerificationStatus}
+              onPress={handleVerifyOtp}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.heroButtonText}>I've Verified My Email</Text>
+                <Text style={styles.heroButtonText}>Verify & Continue</Text>
               )}
             </TouchableOpacity>
 
@@ -594,7 +621,7 @@ const Signup = () => {
               }}
               style={{ alignSelf: 'center', padding: 12 }}
             >
-              <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>I'll verify later</Text>
+              <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -847,6 +874,23 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
     maxHeight: '80%',
+  },
+  otpInputGroup: {
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  otpInput: {
+    width: 200,
+    height: 56,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 2,
+    borderColor: "#0EA5E9",
+    borderRadius: 16,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
+    color: "#0F172A",
+    letterSpacing: 8,
   },
   searchContainer: {
     flexDirection: "row",
