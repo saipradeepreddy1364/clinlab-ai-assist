@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, SafeAreaView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Stethoscope, Loader2, ChevronDown, Search } from "lucide-react-native";
+import { Stethoscope, Loader2, ChevronDown, Search, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
 const showAlert = (title: string, message: string, actions?: any[]) => {
@@ -33,10 +33,13 @@ const Signup = () => {
     email: "",
     phone: "",
     password: "",
+    confirmPassword: "",
     specialization: "",
     organization: { id: "", name: "" },
     role: "dentist",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleResults, setGoogleResults] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -176,9 +179,13 @@ const Signup = () => {
   }, [pendingModalVisible, formData.email, formData.password]);
 
   const handleSignup = async () => {
-    // Basic validation
-    if (!formData.email || !formData.password || !formData.name || !formData.phone) {
+    if (!formData.email || !formData.password || !formData.confirmPassword || !formData.name || !formData.phone) {
       showAlert("Missing Fields", "Please fill in all mandatory fields.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      showAlert("Passwords Mismatch", "The passwords you entered do not match. Please re-type your password.");
       return;
     }
 
@@ -366,14 +373,42 @@ const Signup = () => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              secureTextEntry
-              value={formData.password}
-              onChangeText={(v) => setFormData({ ...formData, password: v })}
-              placeholderTextColor="#94A3B8"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="••••••••"
+                secureTextEntry={!showPassword}
+                value={formData.password}
+                onChangeText={(v) => setFormData({ ...formData, password: v })}
+                placeholderTextColor="#94A3B8"
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon} 
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} color="#94A3B8" /> : <Eye size={18} color="#94A3B8" />}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="••••••••"
+                secureTextEntry={!showConfirmPassword}
+                value={formData.confirmPassword}
+                onChangeText={(v) => setFormData({ ...formData, confirmPassword: v })}
+                placeholderTextColor="#94A3B8"
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon} 
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff size={18} color="#94A3B8" /> : <Eye size={18} color="#94A3B8" />}
+              </TouchableOpacity>
+            </View>
           </View>
 
           {authType === "doctor" && (
@@ -687,6 +722,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 14,
     color: "#0F172A",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 44,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingRight: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  eyeIcon: {
+    padding: 4,
   },
   inputWrapper: {
     position: 'relative',

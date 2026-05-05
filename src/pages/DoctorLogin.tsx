@@ -4,6 +4,17 @@ import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ArrowLeft, ShieldCheck, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
+const showAlert = (title: string, message: string, actions?: any[]) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+    if (actions && actions[0] && actions[0].onPress) {
+      actions[0].onPress();
+    }
+  } else {
+    Alert.alert(title, message, actions);
+  }
+};
+
 const DoctorLogin = () => {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
@@ -25,18 +36,18 @@ const DoctorLogin = () => {
       });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
+        if (error.message.toLowerCase().includes("invalid login credentials")) {
           // Check if user exists
           const { data: check } = await supabase.from('profiles').select('id').eq('full_name', email).maybeSingle();
           if (!check) {
-            Alert.alert("Login Failed", "The email address you entered is not registered.");
+            showAlert("Login Failed", "The email address you entered is not registered.");
           } else {
-            Alert.alert("Login Failed", "The password you entered is incorrect. Please try again.");
+            showAlert("Login Failed", "The password you entered is incorrect. Please try again.");
           }
-        } else if (error.message.includes("Email not confirmed")) {
-          Alert.alert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+        } else if (error.message.toLowerCase().includes("email not confirmed")) {
+          showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
         } else {
-          Alert.alert("Login Failed", error.message);
+          showAlert("Login Failed", error.message);
         }
         setLoading(false);
         return;
@@ -57,20 +68,20 @@ const DoctorLogin = () => {
 
         if (profile?.status === 'pending') {
           await supabase.auth.signOut();
-          Alert.alert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+          showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
           return;
         }
 
         if (profile?.status === 'rejected') {
           await supabase.auth.signOut();
-          Alert.alert("Access Denied", "Your application was rejected by the organization.");
+          showAlert("Access Denied", "Your application was rejected by the organization.");
           return;
         }
 
         navigation.navigate("Dashboard");
       }
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message);
+      showAlert("Login Failed", error.message);
     } finally {
       setLoading(false);
     }
