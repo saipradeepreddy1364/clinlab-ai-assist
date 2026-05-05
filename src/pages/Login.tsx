@@ -26,6 +26,12 @@ const Login = () => {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
+        // HARD LOCK: If email is not confirmed, they MUST NOT stay logged in
+        if (!session.user.email_confirmed_at) {
+          await supabase.auth.signOut();
+          return;
+        }
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
