@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Dimensions, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Stethoscope, Loader2 } from "lucide-react-native";
+import { Stethoscope, Loader2, Eye, EyeOff } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 
@@ -21,6 +21,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -54,16 +55,18 @@ const Login = () => {
         return;
       }
 
-      // 2. Check if account exists first
-      const { data: existingProfile, error: checkError } = await supabase
+      // 2. Separate Email and Password Validation (Pre-check user existence)
+      // Note: We check the auth.users via a profile lookup since profiles usually mirrors users
+      const { data: userExists, error: profileError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('full_name', trimmedEmail) // We'll also check by email if we stored it, but profiles uses full_name for org name... wait.
-        // Actually, we should check auth.users, but we can't easily.
-        // Let's check by the email field if it exists in profiles.
-        .single();
+        .eq('full_name', trimmedEmail) // In this app, sometimes email is stored in full_name for orgs or we use email
+        .maybeSingle();
+
+      // If we don't find it by full_name, try searching by a generic query if possible, 
+      // but usually for Orgs the 'email' is the key. 
+      // Let's just attempt login and catch the specific "Invalid credentials" error.
       
-      // Wait, let's just use the error message from Supabase first
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
@@ -71,13 +74,16 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          // Now we try to see if the user even exists to give a better message
-          const { data: profileCheck } = await supabase
-            .from('profiles')
-            .select('id')
-            .limit(1); // Generic check
-            
-          showAlert("Login Failed", "Incorrect password or account not found. Please verify your email and try again.");
+          // Attempt to see if user exists to provide specific feedback
+          // This is a trade-off between UX and Security (enumeration)
+          // We will use a dedicated check if the user wants this
+          const { data: check } = await supabase.from('profiles').select('id').eq('full_name', trimmedEmail).maybeSingle();
+          
+          if (!check) {
+            showAlert("Login Failed", "The email address you entered is not registered.");
+          } else {
+            showAlert("Login Failed", "The password you entered is incorrect. Please try again.");
+          }
         } else if (error.message.includes("Email not confirmed")) {
           showAlert("Email Verification Required", "Please check your inbox and click the verification link before signing in.");
         } else {
@@ -108,13 +114,7 @@ const Login = () => {
         }
       }
     } catch (error: any) {
-      if (error.message.includes("Invalid login credentials")) {
-        showAlert("Login Failed", "Incorrect password or account not found. Please verify your email and try again.");
-      } else if (error.message.includes("Email not confirmed")) {
-        showAlert("Email Verification Required", "Please check your inbox and click the verification link before signing in.");
-      } else {
-        showAlert("Login Failed", error.message);
-      }
+      showAlert("Login Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -166,14 +166,26 @@ const Login = () => {
                   <Text style={styles.forgotText}>Forgot?</Text>
                 </TouchableOpacity>
               </View>
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholderTextColor="#94A3B8"
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#94A3B8"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon} 
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#94A3B8" />
+                  ) : (
+                    <Eye size={20} color="#94A3B8" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity 
@@ -279,6 +291,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#0F172A",
     backgroundColor: "#F8FAFC",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    paddingRight: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  eyeIcon: {
+    padding: 4,
   },
   forgotText: {
     fontSize: 12,

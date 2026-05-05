@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Stethoscope, Loader2, ArrowLeft, ShieldCheck } from "lucide-react-native";
+import { Stethoscope, Loader2, ArrowLeft, ShieldCheck, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
 const DoctorLogin = () => {
@@ -9,6 +9,7 @@ const DoctorLogin = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -23,7 +24,23 @@ const DoctorLogin = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          // Check if user exists
+          const { data: check } = await supabase.from('profiles').select('id').eq('full_name', email).maybeSingle();
+          if (!check) {
+            Alert.alert("Login Failed", "The email address you entered is not registered.");
+          } else {
+            Alert.alert("Login Failed", "The password you entered is incorrect. Please try again.");
+          }
+        } else if (error.message.includes("Email not confirmed")) {
+          Alert.alert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+        } else {
+          Alert.alert("Login Failed", error.message);
+        }
+        setLoading(false);
+        return;
+      }
 
       if (data.user) {
         // Check if role is doctor
@@ -53,11 +70,7 @@ const DoctorLogin = () => {
         navigation.navigate("Dashboard");
       }
     } catch (error: any) {
-      if (error.message.includes("Email not confirmed")) {
-        Alert.alert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
-      } else {
-        Alert.alert("Login Failed", error.message);
-      }
+      Alert.alert("Login Failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -108,14 +121,26 @@ const DoctorLogin = () => {
                   <Text style={styles.forgotText}>Reset PIN?</Text>
                 </TouchableOpacity>
               </View>
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholderTextColor="#94A3B8"
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#94A3B8"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon} 
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#94A3B8" />
+                  ) : (
+                    <Eye size={20} color="#94A3B8" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.securityNote}>
@@ -236,6 +261,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#0F172A",
     backgroundColor: "#FFFFFF",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 54,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    paddingRight: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: "#0F172A",
+  },
+  eyeIcon: {
+    padding: 4,
   },
   forgotText: {
     fontSize: 12,
