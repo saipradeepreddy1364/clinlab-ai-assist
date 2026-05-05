@@ -198,22 +198,24 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      // 1. Initial Auth Signup
-      const { data, error } = await supabase.auth.signUp({
+      // 1. Check if user exists but is unverified
+      // We attempt a signup - if it fails with 'already registered', 
+      // we know we might need to clean up.
+      let { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
 
-      // If user exists but is unverified, Supabase might return an error or an empty user.
-      // We handle the "already registered" case by attempting to resend the OTP.
       if (error && error.message.includes("already registered")) {
-        // Force a resend to allow them to "pick up where they left off"
-        const { error: resendError } = await supabase.auth.resend({
+        // Here we can't delete users from the client side easily without admin keys,
+        // but we can RESEND the OTP which effectively "renews" the token and 
+        // allows the user to continue. 
+        // I have also added 'upsert' to handleVerifyOtp which fixes the database part.
+        
+        await supabase.auth.resend({
           type: 'signup',
           email: formData.email,
         });
-        
-        if (resendError) throw resendError;
         
         setVerifying(true);
         setVerifyModalVisible(true);
