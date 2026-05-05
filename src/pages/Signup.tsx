@@ -186,7 +186,7 @@ const Signup = () => {
     }
 
     if (formData.password !== formData.confirmPassword) {
-      showAlert("Passwords Mismatch", "The passwords you entered do not match. Please re-type your password.");
+      showAlert("Passwords Mismatch", "The passwords you entered do not match.");
       return;
     }
 
@@ -195,28 +195,13 @@ const Signup = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      showAlert("Weak Password", "Password must be at least 6 characters long.");
-      return;
-    }
-
     setLoading(true);
 
     try {
+      // 1. Initial Auth Signup (No profile created yet)
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.name,
-            phone: formData.phone,
-            role: authType,
-            status: authType === "organization" ? "approved" : "pending",
-            specialization: authType === "doctor" ? formData.specialization : null,
-            org_id: authType === "doctor" ? formData.organization.id : null,
-            org_name: authType === "doctor" ? formData.organization.name : null,
-          },
-        },
       });
 
       if (error) throw error;
@@ -224,31 +209,12 @@ const Signup = () => {
       if (data.user) {
         setTempUserId(data.user.id);
         
-        // Relies on Supabase Database Trigger (auth.users -> public.profiles) 
-        // to handle profile creation since the client doesn't have a session yet (due to email confirmation).
-
-        if (authType === "doctor") {
-          // Doctors remain 'pending' and go directly to the waiting screen
-          setVerifying(false); // Ensure no OTP logic triggers
-          setPendingModalVisible(true);
-        } else {
-          // Organizations MUST verify email via OTP
-          // We explicitly trigger the OTP send here to bypass global settings
-          await supabase.auth.resend({
-            type: 'signup',
-            email: formData.email,
-          });
-          
-          setVerifying(true);
-          setVerifyModalVisible(true);
-        }
+        // 2. We ALWAYS force OTP now for both roles
+        setVerifying(true);
+        setVerifyModalVisible(true);
       }
     } catch (error: any) {
-      if (error.message.includes("already registered")) {
-        showAlert("Account Exists", "This email is already registered. Please sign in instead.");
-      } else {
-        showAlert("Registration Note", error.message || "Please check your email to verify your account.");
-      }
+      showAlert("Registration Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -262,6 +228,7 @@ const Signup = () => {
 
     setLoading(true);
     try {
+      // 1. Verify the OTP with Supabase
       const { data, error } = await supabase.auth.verifyOtp({
         email: formData.email,
         token: otp,
@@ -271,23 +238,34 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.session) {
-        // NOW we add the organization to the public database
+        // 2. NOW we create the database record based on the role
+        const profileData = {
+          id: data.session.user.id,
+          full_name: formData.name,
+          phone: formData.phone,
+          role: authType,
+          status: authType === "organization" ? "approved" : "pending", // Doctors stay pending
+          specialization: authType === "doctor" ? formData.specialization : null,
+          org_id: authType === "doctor" ? formData.organization.id : null,
+        };
+
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
-            id: data.session.user.id,
-            full_name: formData.name,
-            phone: formData.phone,
-            role: 'organization',
-            status: 'approved'
-          });
+          .insert(profileData);
 
         if (profileError) throw profileError;
 
         setVerifyModalVisible(false);
-        showAlert("Verification Successful", "Your organization is now verified! Welcome to ClinLab.", [
-          { text: "Enter Dashboard", onPress: () => navigation.replace("OrgDashboard") }
-        ]);
+
+        if (authType === "doctor") {
+          // Redirect Doctors to the waiting screen
+          setPendingModalVisible(true);
+        } else {
+          // Redirect Organizations to dashboard
+          showAlert("Welcome", "Your organization is verified!", [
+            { text: "Enter Dashboard", onPress: () => navigation.replace("OrgDashboard") }
+          ]);
+        }
       }
     } catch (error: any) {
       showAlert("Verification Failed", error.message);
