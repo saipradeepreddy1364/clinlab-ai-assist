@@ -232,6 +232,12 @@ const Signup = () => {
           setPendingModalVisible(true);
         } else {
           // Organizations MUST verify email via OTP
+          // We explicitly trigger the OTP send here to bypass global settings
+          await supabase.auth.resend({
+            type: 'signup',
+            email: formData.email,
+          });
+          
           setVerifying(true);
           setVerifyModalVisible(true);
         }
