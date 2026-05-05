@@ -149,8 +149,8 @@ const ForgotPassword = () => {
                 <Text style={styles.label}>Verification Code</Text>
                 <TextInput
                   style={[styles.input, styles.otpInput]}
-                  placeholder="000000"
-                  maxLength={6}
+                  placeholder="00000000"
+                  maxLength={8}
                   keyboardType="number-pad"
                   value={otp}
                   onChangeText={setOtp}
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   inputGroup: { gap: 8 },
   label: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
   input: { height: 48, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 12, paddingHorizontal: 16, fontSize: 14, color: "#0F172A", backgroundColor: "#F8FAFC" },
-  otpInput: { textAlign: 'center', fontSize: 24, fontWeight: '700', letterSpacing: 8 },
+  otpInput: { textAlign: 'center', fontSize: 24, fontWeight: '700', letterSpacing: 4, height: 56 },
   primaryButton: { height: 48, backgroundColor: "#0EA5E9", borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 8 },
   buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
   textButton: { alignSelf: 'center', padding: 8 },

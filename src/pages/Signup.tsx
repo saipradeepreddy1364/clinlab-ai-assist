@@ -593,8 +593,8 @@ const Signup = () => {
             <View style={styles.otpInputGroup}>
               <TextInput
                 style={styles.otpInput}
-                placeholder="000000"
-                maxLength={6}
+                placeholder="00000000"
+                maxLength={8}
                 keyboardType="number-pad"
                 value={otp}
                 onChangeText={setOtp}
@@ -880,7 +880,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   otpInput: {
-    width: 200,
+    width: 240,
     height: 56,
     backgroundColor: "#F8FAFC",
     borderWidth: 2,
@@ -890,7 +890,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: "#0F172A",
-    letterSpacing: 8,
+    letterSpacing: 4,
   },
   searchContainer: {
     flexDirection: "row",
