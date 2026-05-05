@@ -264,6 +264,12 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.session) {
+        // Explicitly update the profile to 'approved' now that email is verified
+        await supabase
+          .from('profiles')
+          .update({ status: 'approved' })
+          .eq('id', data.session.user.id);
+
         setVerifyModalVisible(false);
         showAlert("Verification Successful", "Your organization is now verified! Welcome to ClinLab.", [
           { text: "Enter Dashboard", onPress: () => navigation.replace("OrgDashboard") }
@@ -274,6 +280,16 @@ const Signup = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelSignup = async () => {
+    // If user cancels during OTP, we clear state and navigate back
+    // The unverified auth record will eventually be cleaned up by Supabase
+    setVerifyModalVisible(false);
+    setOtp("");
+    setTempUserId(null);
+    showAlert("Registration Cancelled", "The verification process was aborted. Your organization details have not been finalized.");
+    navigation.navigate("Login");
   };
 
   return (
@@ -615,13 +631,10 @@ const Signup = () => {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              onPress={() => {
-                setVerifyModalVisible(false);
-                navigation.navigate("Login");
-              }}
+              onPress={handleCancelSignup}
               style={{ alignSelf: 'center', padding: 12 }}
             >
-              <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>Cancel</Text>
+              <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>Cancel Registration</Text>
             </TouchableOpacity>
           </View>
         </View>
