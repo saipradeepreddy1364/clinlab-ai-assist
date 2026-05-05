@@ -265,7 +265,7 @@ const Signup = () => {
 
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert(profileData);
+          .upsert(profileData); // Use upsert to prevent "duplicate key" errors
 
         if (profileError) throw profileError;
 
