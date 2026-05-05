@@ -207,18 +207,8 @@ const Signup = () => {
       });
 
       if (error && error.message.includes("already registered")) {
-        // Here we can't delete users from the client side easily without admin keys,
-        // but we can RESEND the OTP which effectively "renews" the token and 
-        // allows the user to continue. 
-        // I have also added 'upsert' to handleVerifyOtp which fixes the database part.
-        
-        await supabase.auth.resend({
-          type: 'signup',
-          email: formData.email,
-        });
-        
-        setVerifying(true);
-        setVerifyModalVisible(true);
+        showAlert("Account Unverified", "This account exists but is not verified. Please sign up again.");
+        setLoading(false);
         return;
       }
 
