@@ -48,8 +48,8 @@ const ForgotPassword = () => {
   };
 
   const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 6) {
-      showAlert("Error", "Please enter the 6-digit code.");
+    if (!otp || otp.length < 8) {
+      showAlert("Error", "Please enter the 8-digit code.");
       return;
     }
 
@@ -118,7 +118,7 @@ const ForgotPassword = () => {
             </Text>
             <Text style={styles.subtitle}>
               {step === 1 ? "Enter your email to receive a recovery code." : 
-               step === 2 ? `Enter the 6-digit code sent to ${email}` : 
+               step === 2 ? `Enter the 8-digit code sent to ${email}` : 
                "Create a strong new password for your account."}
             </Text>
           </View>

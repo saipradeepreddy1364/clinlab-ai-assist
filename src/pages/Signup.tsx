@@ -248,8 +248,8 @@ const Signup = () => {
   };
 
   const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 6) {
-      showAlert("Invalid OTP", "Please enter the 6-digit verification code.");
+    if (!otp || otp.length < 8) {
+      showAlert("Invalid OTP", "Please enter the 8-digit verification code.");
       return;
     }
 
@@ -601,7 +601,7 @@ const Signup = () => {
 
             <Text style={[styles.modalHeader, { textAlign: 'center' }]}>Verify Your Email</Text>
             <Text style={{ textAlign: 'center', color: '#64748B', marginBottom: 24, lineHeight: 22, fontSize: 15 }}>
-              We've sent a 6-digit verification code to{"\n"}
+              We've sent an 8-digit verification code to{"\n"}
               <Text style={{ fontWeight: '700', color: '#0EA5E9' }}>{formData.email}</Text>.{"\n"}
               Please enter it below to activate your account.
             </Text>
