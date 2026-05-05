@@ -293,19 +293,18 @@ const Signup = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <ScrollView 
           ref={scrollRef}
-          style={{ flex: 1 }}
-          contentContainerStyle={[styles.scrollContent, { flexGrow: 1, paddingBottom: 300 }]}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
-          keyboardShouldPersistTaps="always"
-          nestedScrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
         >
         <View style={styles.hero}>
           <Text style={styles.title}>Create account</Text>
@@ -672,11 +671,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   scrollContent: {
-    padding: 20,
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
+    padding: 24,
+    paddingTop: Platform.OS === "ios" ? 20 : 40,
+    paddingBottom: 100, // Extra space at bottom
     gap: 16,
-    flexGrow: 1,
   },
   brand: {
     flexDirection: "row",
