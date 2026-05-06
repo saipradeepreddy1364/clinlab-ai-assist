@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 
-// A basic website (HTML + assets) needs roughly 0.5 Mbps to load at all.
-// Below this speed, pages will time out or fail to load meaningfully.
-// Above this speed → no popup, no noise.
-const SLOW_SPEED_THRESHOLD_MBPS = 0.5;
+// Threshold: 0.3 Mbps is roughly the minimum required for this app to be functional.
+// Anything above this should not trigger a "Slow Internet" popup.
+const SLOW_SPEED_THRESHOLD_MBPS = 0.3;
 const POPUP_DURATION_MS = 2000;
+
+// A small, reliable public resource (~50KB) for real download testing.
+const TEST_FILE_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Circle-icons-phone.svg/512px-Circle-icons-phone.svg.png';
+const TEST_FILE_SIZE_BITS = 48000 * 8; // ~48KB converted to bits
 
 export type NetworkStatus = 'offline' | 'slow' | 'normal' | 'unknown';
 
@@ -18,20 +21,16 @@ export const useInternetSpeed = () => {
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevStatusRef = useRef<NetworkStatus>('unknown');
 
-  // Only trigger popup when going offline or below 0.5 Mbps.
-  // Never show popup for normal speeds.
   const triggerPopup = useCallback((newStatus: NetworkStatus) => {
-    if (newStatus === prevStatusRef.current) return; // no change → no popup
+    if (newStatus === prevStatusRef.current) return;
     prevStatusRef.current = newStatus;
 
     if (newStatus === 'normal' || newStatus === 'unknown') {
-      // Speed is fine — dismiss any existing popup silently
       setShowPopup(false);
       if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
       return;
     }
 
-    // Only show popup for 'offline' or 'slow'
     setShowPopup(true);
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
     popupTimerRef.current = setTimeout(() => {
@@ -39,22 +38,8 @@ export const useInternetSpeed = () => {
     }, POPUP_DURATION_MS);
   }, []);
 
-  const applySpeed = useCallback((mbps: number) => {
-    const rounded = Math.round(mbps * 10) / 10;
-    setSpeed(rounded);
-    setIsOffline(false);
-
-    if (rounded < SLOW_SPEED_THRESHOLD_MBPS) {
-      setIsLowSpeed(true);
-      triggerPopup('slow');
-    } else {
-      setIsLowSpeed(false);
-      triggerPopup('normal'); // clears popup if it was showing
-    }
-  }, [triggerPopup]);
-
   const checkSpeed = useCallback(async () => {
-    // 1. Offline check
+    // 1. Basic Offline Check
     if (typeof navigator !== 'undefined' && 'onLine' in navigator && !navigator.onLine) {
       setIsOffline(true);
       setIsLowSpeed(false);
@@ -65,64 +50,56 @@ export const useInternetSpeed = () => {
 
     if (Platform.OS !== 'web') return;
 
-    // 2. navigator.connection (Chrome / Edge / Android WebView)
-    //    Reliable, instant, no network request needed.
-    const nav: any = navigator;
-    const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
-
-    if (connection && typeof connection.downlink === 'number') {
-      applySpeed(connection.downlink);
-
-      // React to live network changes (e.g. switching WiFi → 4G)
-      if (!connection._clGuardListening) {
-        connection._clGuardListening = true;
-        connection.addEventListener('change', () => {
-          if (typeof connection.downlink === 'number') applySpeed(connection.downlink);
-        });
-      }
-      return;
-    }
-
-    // 3. Fallback latency test against same-origin /favicon.ico
-    //    (Firefox / Safari — no Network Information API)
     try {
+      // 2. Real Download Speed Test
+      // We perform an actual fetch of a ~50KB file to calculate real throughput.
       const start = performance.now();
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s max wait
 
-      await fetch(`/favicon.ico?t=${start}`, {
+      const response = await fetch(`${TEST_FILE_URL}?cache-bust=${start}`, {
         cache: 'no-store',
         signal: controller.signal,
       });
 
+      if (!response.ok) throw new Error('Download failed');
+
+      // Consume the body to ensure we measure the full download time
+      const blob = await response.blob();
       clearTimeout(timeoutId);
-      const ms = performance.now() - start;
+      
+      const end = performance.now();
+      const durationSeconds = (end - start) / 1000;
+      
+      // Calculate Mbps: (bits / seconds) / 1,000,000
+      // We use the actual blob size if available, otherwise our estimate
+      const actualBits = blob.size > 0 ? blob.size * 8 : TEST_FILE_SIZE_BITS;
+      const mbps = actualBits / (durationSeconds * 1000000);
+      const rounded = Math.round(mbps * 100) / 100;
 
-      // Map latency → rough speed estimate:
-      //   <300ms  → good (5 Mbps+)
-      //   300-800ms → okay (1-2 Mbps)
-      //   800-2000ms → borderline (0.5-1 Mbps)
-      //   >2000ms → very slow (<0.5 Mbps)
-      let estimated: number;
-      if (ms < 300)       estimated = 5.0;
-      else if (ms < 800)  estimated = 1.5;
-      else if (ms < 2000) estimated = 0.6;
-      else                estimated = 0.3;
+      setSpeed(rounded);
+      setIsOffline(false);
 
-      applySpeed(estimated);
+      if (rounded < SLOW_SPEED_THRESHOLD_MBPS) {
+        setIsLowSpeed(true);
+        triggerPopup('slow');
+      } else {
+        setIsLowSpeed(false);
+        triggerPopup('normal');
+      }
     } catch (error: any) {
       if (error?.name === 'AbortError') {
-        // Timed out → definitely slow
-        applySpeed(0.2);
+        // Truly slow if a 50KB file takes > 8 seconds
+        setIsLowSpeed(true);
+        setIsOffline(false);
+        triggerPopup('slow');
       } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
         setIsOffline(true);
         setIsLowSpeed(false);
-        setSpeed(0);
         triggerPopup('offline');
       }
-      // Any other fetch error → ignore, don't show popup
     }
-  }, [applySpeed, triggerPopup]);
+  }, [triggerPopup]);
 
   useEffect(() => {
     checkSpeed();
@@ -140,8 +117,8 @@ export const useInternetSpeed = () => {
       window.addEventListener('offline', handleOffline);
     }
 
-    // Re-check every 30 seconds
-    const interval = setInterval(checkSpeed, 30_000);
+    // Re-check every 60 seconds to avoid excessive data usage
+    const interval = setInterval(checkSpeed, 60000);
 
     return () => {
       clearInterval(interval);
