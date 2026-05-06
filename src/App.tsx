@@ -7,6 +7,7 @@ import { StatusBar } from "expo-status-bar";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthWrapper } from "@/components/AuthWrapper";
+import { NetworkGuard } from "@/components/NetworkGuard";
 import { AppDataProvider } from "@/lib/AppDataContext";
 import SplashScreen from "./pages/SplashScreen";
 import Login from "./pages/Login";
@@ -39,6 +40,7 @@ const App = () => {
       <AppDataProvider>
         <ThemeProvider>
           <SafeAreaProvider>
+            <NetworkGuard />
             <AuthWrapper>
               <NavigationContainer>
               <StatusBar style="auto" />
