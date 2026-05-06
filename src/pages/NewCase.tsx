@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { X, Loader2, ChevronDown, Check, Stethoscope } from "lucide-react-native";
+import { X, Loader2, ChevronDown, Check, Stethoscope, Clipboard } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
@@ -116,7 +116,7 @@ const NewCase = () => {
               <View style={styles.typeRow}>
                 {[
                   { id: "new-checkup", label: "Checkup", icon: Stethoscope },
-                  { id: "active", label: "General", icon: ClipboardList },
+                  { id: "active", label: "General", icon: Clipboard },
                 ].map((t) => (
                   <TouchableOpacity
                     key={t.id}

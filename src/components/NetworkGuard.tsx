@@ -4,36 +4,37 @@ import { WifiOff, AlertTriangle } from 'lucide-react-native';
 import { useInternetSpeed } from '@/hooks/useInternetSpeed';
 
 export const NetworkGuard = () => {
-  const { isLowSpeed, isOffline, speed } = useInternetSpeed();
+  const { isLowSpeed, isOffline, speed, showPopup } = useInternetSpeed();
   const slideAnim = useRef(new Animated.Value(-100)).current;
 
-  const isVisible = isOffline || isLowSpeed;
-
+  // Animate the banner in when showPopup is true, out after 2 seconds
   useEffect(() => {
     Animated.spring(slideAnim, {
-      toValue: isVisible ? 0 : -100,
+      toValue: showPopup ? 0 : -120,
       useNativeDriver: true,
-      tension: 50,
-      friction: 10,
+      tension: 60,
+      friction: 12,
     }).start();
-  }, [isVisible]);
+  }, [showPopup]);
 
   const bgColor = isOffline ? '#EF4444' : '#F59E0B'; // Red for offline, Amber for slow
   const Icon = isOffline ? WifiOff : AlertTriangle;
-  const message = isOffline 
-    ? 'No internet connection. Reconnecting...' 
+  const message = isOffline
+    ? 'No internet connection. Reconnecting...'
     : `Slow connection (${speed?.toFixed(1)} Mbps). Features may be slow.`;
 
+  // Don't render at all if there's nothing to show and popup is hidden
+  if (!showPopup && !isOffline && !isLowSpeed) return null;
+
   return (
-    <Animated.View 
+    <Animated.View
       style={[
-        styles.container, 
-        { 
+        styles.container,
+        {
           transform: [{ translateY: slideAnim }],
           backgroundColor: bgColor,
-          // Only show shadow when visible to avoid artifacts
-          shadowOpacity: isVisible ? 0.3 : 0,
-        }
+          shadowOpacity: showPopup ? 0.3 : 0,
+        },
       ]}
     >
       <SafeAreaView>
@@ -94,5 +95,5 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     transform: [{ scale: 1.5 }],
     position: 'absolute',
-  }
+  },
 });
