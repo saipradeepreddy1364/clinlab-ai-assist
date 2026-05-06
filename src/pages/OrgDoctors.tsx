@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Platform, Alert, Modal, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Search, Loader2, User, Mail, Phone, Calendar, ShieldCheck } from "lucide-react-native";
+import { Search, Loader2, User, Mail, Phone, Calendar, ShieldCheck, MoreVertical, Ban, UserMinus, CheckCircle2 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
@@ -10,30 +10,111 @@ const OrgDoctors = () => {
   const [doctors, setDoctors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const fetchDoctors = async () => {
+    setLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    
+    if (user) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('org_id', user.id)
+        .eq('role', 'doctor')
+        .in('status', ['approved', 'blocked'])
+        .order('full_name', { ascending: true });
+
+      if (!error && data) {
+        setDoctors(data);
+      }
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchDoctors = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      
-      if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('org_id', user.id)
-          .eq('role', 'doctor')
-          .eq('status', 'approved')
-          .order('full_name', { ascending: true });
-
-        if (!error && data) {
-          setDoctors(data);
-        }
-      }
-      setLoading(false);
-    };
-
     fetchDoctors();
   }, []);
+
+  const handleBlockDoctor = async (doctorId: string, currentStatus: string) => {
+    const isBlocking = currentStatus !== 'blocked';
+    const actionLabel = isBlocking ? "Block" : "Unblock";
+    
+    const confirmAction = () => {
+      if (Platform.OS === 'web') {
+        return window.confirm(`Are you sure you want to ${actionLabel.toLowerCase()} this doctor? ${isBlocking ? "They will lose access to all clinical cases immediately." : ""}`);
+      }
+      return true; // Alert.alert handles this on mobile
+    };
+
+    const performAction = async () => {
+      setProcessingId(doctorId);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: isBlocking ? 'blocked' : 'approved' })
+        .eq('id', doctorId);
+
+      if (error) {
+        alert(error.message);
+      } else {
+        await fetchDoctors();
+      }
+      setProcessingId(null);
+      setActiveMenu(null);
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirmAction()) performAction();
+    } else {
+      Alert.alert(
+        `${actionLabel} Doctor`,
+        `Are you sure you want to ${actionLabel.toLowerCase()} this doctor? ${isBlocking ? "They will lose access to all clinical cases immediately." : ""}`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: actionLabel, style: isBlocking ? "destructive" : "default", onPress: performAction }
+        ]
+      );
+    }
+  };
+
+  const handleRemoveDoctor = async (doctorId: string) => {
+    const performAction = async () => {
+      setProcessingId(doctorId);
+      // Detach doctor from org and reset status to pending
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          org_id: null, 
+          status: 'pending' 
+        })
+        .eq('id', doctorId);
+
+      if (error) {
+        alert(error.message);
+      } else {
+        await fetchDoctors();
+      }
+      setProcessingId(null);
+      setActiveMenu(null);
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm("Are you sure you want to remove this doctor? They will be detached from your organization and moved back to pending status.")) {
+        performAction();
+      }
+    } else {
+      Alert.alert(
+        "Remove Doctor",
+        "Are you sure you want to remove this doctor? They will be detached from your organization and moved back to pending status.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Remove", style: "destructive", onPress: performAction }
+        ]
+      );
+    }
+  };
 
   const filteredDoctors = doctors.filter(d => 
     d.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,10 +162,47 @@ const OrgDoctors = () => {
                     </View>
                     <Text style={styles.specialtyText}>{d.specialization || "General Practitioner"}</Text>
                   </View>
-                  <View style={styles.statusBadge}>
-                    <View style={styles.statusDot} />
-                    <Text style={styles.statusText}>Active</Text>
+                  <View style={[styles.statusBadge, d.status === 'blocked' && styles.statusBadgeBlocked]}>
+                    <View style={[styles.statusDot, d.status === 'blocked' && styles.statusDotBlocked]} />
+                    <Text style={[styles.statusText, d.status === 'blocked' && styles.statusTextBlocked]}>
+                      {d.status === 'blocked' ? 'Blocked' : 'Active'}
+                    </Text>
                   </View>
+                  <TouchableOpacity 
+                    onPress={() => setActiveMenu(activeMenu === d.id ? null : d.id)}
+                    style={styles.moreButton}
+                  >
+                    <MoreVertical size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+
+                  {/* Inline Menu */}
+                  {activeMenu === d.id && (
+                    <View style={styles.menuOverlay}>
+                      <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => handleBlockDoctor(d.id, d.status)}
+                      >
+                        {d.status === 'blocked' ? (
+                          <>
+                            <CheckCircle2 size={16} color="#10B981" />
+                            <Text style={[styles.menuText, { color: "#10B981" }]}>Unblock Access</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Ban size={16} color="#EF4444" />
+                            <Text style={[styles.menuText, { color: "#EF4444" }]}>Block Usage</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.menuItem, styles.menuItemDestructive]}
+                        onPress={() => handleRemoveDoctor(d.id)}
+                      >
+                        <UserMinus size={16} color="#EF4444" />
+                        <Text style={[styles.menuText, { color: "#EF4444" }]}>Remove from Org</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.divider} />
@@ -235,6 +353,54 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#166534",
     textTransform: "uppercase",
+  },
+  statusBadgeBlocked: {
+    backgroundColor: "#FEF2F2",
+  },
+  statusDotBlocked: {
+    backgroundColor: "#EF4444",
+  },
+  statusTextBlocked: {
+    color: "#991B1B",
+  },
+  moreButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  menuOverlay: {
+    position: "absolute",
+    top: 50,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 8,
+    width: 180,
+    zIndex: 1000,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 10,
+  },
+  menuItemDestructive: {
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    marginTop: 4,
+    paddingTop: 12,
+  },
+  menuText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0F172A",
   },
   divider: {
     height: 1,
