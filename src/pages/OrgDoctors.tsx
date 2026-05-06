@@ -169,40 +169,78 @@ const OrgDoctors = () => {
                     </Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => setActiveMenu(activeMenu === d.id ? null : d.id)}
+                    onPress={() => setActiveMenu(d.id)}
                     style={styles.moreButton}
                   >
                     <MoreVertical size={20} color="#94A3B8" />
                   </TouchableOpacity>
 
-                  {/* Inline Menu */}
-                  {activeMenu === d.id && (
-                    <View style={styles.menuOverlay}>
-                      <TouchableOpacity 
-                        style={styles.menuItem}
-                        onPress={() => handleBlockDoctor(d.id, d.status)}
-                      >
-                        {d.status === 'blocked' ? (
-                          <>
-                            <CheckCircle2 size={16} color="#10B981" />
-                            <Text style={[styles.menuText, { color: "#10B981" }]}>Unblock Access</Text>
-                          </>
-                        ) : (
-                          <>
-                            <Ban size={16} color="#EF4444" />
-                            <Text style={[styles.menuText, { color: "#EF4444" }]}>Block Usage</Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.menuItem, styles.menuItemDestructive]}
-                        onPress={() => handleRemoveDoctor(d.id)}
-                      >
-                        <UserMinus size={16} color="#EF4444" />
-                        <Text style={[styles.menuText, { color: "#EF4444" }]}>Remove from Org</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  {/* Dropdown Menu Modal */}
+                  <Modal
+                    visible={activeMenu === d.id}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setActiveMenu(null)}
+                  >
+                    <Pressable 
+                      style={styles.modalBackdrop} 
+                      onPress={() => setActiveMenu(null)}
+                    >
+                      <View style={styles.menuContainer}>
+                        <View style={styles.menuHeader}>
+                          <Text style={styles.menuTitle}>Doctor Actions</Text>
+                          <Text style={styles.menuSubtitle}>{d.full_name}</Text>
+                        </View>
+                        
+                        <TouchableOpacity 
+                          style={styles.menuItem}
+                          onPress={() => {
+                            setActiveMenu(null);
+                            handleBlockDoctor(d.id, d.status);
+                          }}
+                        >
+                          <View style={[styles.menuIconBox, { backgroundColor: d.status === 'blocked' ? '#F0FDF4' : '#FEF2F2' }]}>
+                            {d.status === 'blocked' ? (
+                              <CheckCircle2 size={18} color="#10B981" />
+                            ) : (
+                              <Ban size={18} color="#EF4444" />
+                            )}
+                          </View>
+                          <View>
+                            <Text style={[styles.menuText, { color: d.status === 'blocked' ? "#10B981" : "#EF4444" }]}>
+                              {d.status === 'blocked' ? 'Unblock Access' : 'Block Usage'}
+                            </Text>
+                            <Text style={styles.menuDesc}>
+                              {d.status === 'blocked' ? 'Restore clinical access' : 'Restrict temporary usage'}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.menuItem}
+                          onPress={() => {
+                            setActiveMenu(null);
+                            handleRemoveDoctor(d.id);
+                          }}
+                        >
+                          <View style={[styles.menuIconBox, { backgroundColor: '#FEF2F2' }]}>
+                            <UserMinus size={18} color="#EF4444" />
+                          </View>
+                          <View>
+                            <Text style={[styles.menuText, { color: "#EF4444" }]}>Remove from Org</Text>
+                            <Text style={styles.menuDesc}>Detach from your organization</Text>
+                          </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.cancelMenuButton}
+                          onPress={() => setActiveMenu(null)}
+                        >
+                          <Text style={styles.cancelMenuText}>Cancel</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </Pressable>
+                  </Modal>
                 </View>
 
                 <View style={styles.divider} />
@@ -364,43 +402,81 @@ const styles = StyleSheet.create({
     color: "#991B1B",
   },
   moreButton: {
-    padding: 4,
-    marginLeft: 4,
-  },
-  menuOverlay: {
-    position: "absolute",
-    top: 50,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
     padding: 8,
-    width: 180,
-    zIndex: 1000,
+    marginRight: -8,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  menuContainer: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    padding: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 20,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    elevation: 25,
+  },
+  menuHeader: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  menuTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  menuSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 2,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    padding: 12,
-    borderRadius: 10,
+    gap: 16,
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 8,
+    backgroundColor: "#F8FAFC",
   },
-  menuItemDestructive: {
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-    marginTop: 4,
-    paddingTop: 12,
+  menuIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
   menuText: {
-    fontSize: 13,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  menuDesc: {
+    fontSize: 11,
+    color: "#64748B",
+    marginTop: 1,
+  },
+  cancelMenuButton: {
+    marginTop: 12,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: "#F1F5F9",
+  },
+  cancelMenuText: {
+    fontSize: 14,
     fontWeight: "600",
-    color: "#0F172A",
+    color: "#475569",
   },
   divider: {
     height: 1,
