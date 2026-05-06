@@ -54,25 +54,12 @@ const Login = () => {
       const trimmedEmail = email.trim();
       const trimmedPassword = password.trim();
 
-      // 1. Basic Email Validation
       if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
         showAlert("Invalid Email", "Please enter a valid email address.");
         setLoading(false);
         return;
       }
 
-      // 2. Separate Email and Password Validation (Pre-check user existence)
-      // Note: We check the auth.users via a profile lookup since profiles usually mirrors users
-      const { data: userExists, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('full_name', trimmedEmail) // In this app, sometimes email is stored in full_name for orgs or we use email
-        .maybeSingle();
-
-      // If we don't find it by full_name, try searching by a generic query if possible, 
-      // but usually for Orgs the 'email' is the key. 
-      // Let's just attempt login and catch the specific "Invalid credentials" error.
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
@@ -80,18 +67,14 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          // Attempt to see if user exists to provide specific feedback
-          // This is a trade-off between UX and Security (enumeration)
-          // We will use a dedicated check if the user wants this
           const { data: check } = await supabase.from('profiles').select('id').eq('full_name', trimmedEmail).maybeSingle();
-          
           if (!check) {
             showAlert("Login Failed", "The email address you entered is not registered.");
           } else {
             showAlert("Login Failed", "The password you entered is incorrect. Please try again.");
           }
         } else if (error.message.includes("Email not confirmed")) {
-          showAlert("Email Verification Required", "Please check your inbox and click the verification link before signing in.");
+          showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
         } else {
           throw error;
         }
@@ -105,22 +88,18 @@ const Login = () => {
           .eq('id', data.session.user.id)
           .single();
 
-        // 1. Strict Email Verification Check for Organizations
         if (profile?.role === 'organization' && !data.session.user.email_confirmed_at) {
-          showAlert("Verification Required", "Please verify your email with the OTP code sent to you.");
-          // We can't let them in yet
+          showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
           await supabase.auth.signOut();
           return;
         }
 
-        // 2. Approval Check for Doctors
         if (profile?.role === 'doctor' && profile.status !== 'approved') {
           showAlert("Approval Pending", "Your account is waiting for approval from your organization.");
           await supabase.auth.signOut();
           return;
         }
 
-        // Success - Navigate to correct dashboard
         navigation.replace(profile?.role === "organization" ? "OrgDashboard" : "Dashboard");
       }
     } catch (error: any) {
@@ -128,12 +107,6 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const continueAsGuest = async () => {
-    await AsyncStorage.getItem("guestMode");
-    await AsyncStorage.setItem("guestMode", "true");
-    navigation.navigate("Dashboard");
   };
 
   return (
@@ -348,19 +321,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  secondaryButton: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    color: "#0F172A",
-    fontSize: 14,
-    fontWeight: "600",
-  },
   doctorLoginButton: {
     height: 48,
     flexDirection: "row",
@@ -390,9 +350,6 @@ const styles = StyleSheet.create({
     color: "#0EA5E9",
     fontWeight: "600",
   },
-  spin: {
-    // animated spin logic in RN
-  }
 });
 
 export default Login;

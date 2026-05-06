@@ -37,7 +37,6 @@ const DoctorLogin = () => {
 
       if (error) {
         if (error.message.toLowerCase().includes("invalid login credentials")) {
-          // Check if user exists
           const { data: check } = await supabase.from('profiles').select('id').eq('full_name', email).maybeSingle();
           if (!check) {
             showAlert("Login Failed", "The email address you entered is not registered.");
@@ -45,7 +44,7 @@ const DoctorLogin = () => {
             showAlert("Login Failed", "The password you entered is incorrect. Please try again.");
           }
         } else if (error.message.toLowerCase().includes("email not confirmed")) {
-          showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+          showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
         } else {
           showAlert("Login Failed", error.message);
         }
@@ -54,7 +53,6 @@ const DoctorLogin = () => {
       }
 
       if (data.user) {
-        // Check if role is doctor
         const { data: profile } = await supabase
           .from('profiles')
           .select('role, status')
