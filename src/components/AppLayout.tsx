@@ -45,6 +45,7 @@ const doctorTabs: Tab[] = [
 
 const orgTabs: Tab[] = [
   { name: "OrgDashboard", label: "Overview", icon: LayoutGrid },
+  { name: "OrgDoctors", label: "Doctors", icon: Users },
   { name: "OrgCases", label: "Cases", icon: ClipboardList },
   { name: "OrgReports", label: "Reports", icon: FileSearch },
 ];
@@ -58,6 +59,7 @@ const titleMap: Record<string, string> = {
   "Patients": "Patient Records",
   "OrgCases": "Organization Cases",
   "OrgReports": "Patient Reports",
+  "OrgDoctors": "Clinical Staff",
   "Insights": "Clinical Insights",
 };
 

@@ -229,6 +229,50 @@ const OrgDashboard = () => {
 
 
 
+        {/* Clinical Staff Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>Clinical Staff</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{doctors.length}</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate("OrgDoctors")}>
+              <Text style={styles.seeAll}>Manage Staff</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.doctorScroll}
+          >
+            {doctors.map((dr) => (
+              <TouchableOpacity 
+                key={dr.id} 
+                style={styles.drCard}
+                onPress={() => navigation.navigate("OrgDoctors")}
+              >
+                <View style={styles.drAvatar}>
+                  <Text style={styles.drAvatarText}>{dr.full_name?.charAt(0)}</Text>
+                </View>
+                <Text style={styles.drName} numberOfLines={1}>{dr.full_name}</Text>
+                <Text style={styles.drSpecialty}>Doctor</Text>
+                <View style={styles.drStatus}>
+                  <View style={styles.onlineDot} />
+                  <Text style={styles.statusText}>Active</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {doctors.length === 0 && (
+              <View style={styles.emptyDr}>
+                <Text style={styles.emptyText}>No approved doctors found.</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+
         {/* Recent Organization Activity */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -418,13 +462,15 @@ const styles = StyleSheet.create({
     color: "#0EA5E9",
   },
   badge: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  badgeText: {
     fontSize: 11,
     fontWeight: "700",
-    backgroundColor: "#F1F5F9",
     color: "#475569",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
   },
   doctorScroll: {
     marginHorizontal: -20,
