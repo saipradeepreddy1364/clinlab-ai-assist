@@ -67,12 +67,7 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          const { data: check } = await supabase.from('profiles').select('id').eq('full_name', trimmedEmail).maybeSingle();
-          if (!check) {
-            showAlert("Login Failed", "The email address you entered is not registered.");
-          } else {
-            showAlert("Login Failed", "The password you entered is incorrect. Please try again.");
-          }
+          showAlert("Login Failed", "Incorrect email or password. Please try again.");
         } else if (error.message.includes("Email not confirmed")) {
           showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
         } else {
