@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 
-const SPEED_THRESHOLD_MBPS = 2;
+// A basic website (HTML + assets) needs roughly 0.5 Mbps to load at all.
+// Below this speed, pages will time out or fail to load meaningfully.
+// Above this speed → no popup, no noise.
+const SLOW_SPEED_THRESHOLD_MBPS = 0.5;
 const POPUP_DURATION_MS = 2000;
 
 export type NetworkStatus = 'offline' | 'slow' | 'normal' | 'unknown';
@@ -15,16 +18,40 @@ export const useInternetSpeed = () => {
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevStatusRef = useRef<NetworkStatus>('unknown');
 
+  // Only trigger popup when going offline or below 0.5 Mbps.
+  // Never show popup for normal speeds.
   const triggerPopup = useCallback((newStatus: NetworkStatus) => {
-    if (newStatus === prevStatusRef.current) return;
+    if (newStatus === prevStatusRef.current) return; // no change → no popup
     prevStatusRef.current = newStatus;
 
+    if (newStatus === 'normal' || newStatus === 'unknown') {
+      // Speed is fine — dismiss any existing popup silently
+      setShowPopup(false);
+      if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+      return;
+    }
+
+    // Only show popup for 'offline' or 'slow'
     setShowPopup(true);
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
     popupTimerRef.current = setTimeout(() => {
       setShowPopup(false);
     }, POPUP_DURATION_MS);
   }, []);
+
+  const applySpeed = useCallback((mbps: number) => {
+    const rounded = Math.round(mbps * 10) / 10;
+    setSpeed(rounded);
+    setIsOffline(false);
+
+    if (rounded < SLOW_SPEED_THRESHOLD_MBPS) {
+      setIsLowSpeed(true);
+      triggerPopup('slow');
+    } else {
+      setIsLowSpeed(false);
+      triggerPopup('normal'); // clears popup if it was showing
+    }
+  }, [triggerPopup]);
 
   const checkSpeed = useCallback(async () => {
     // 1. Offline check
@@ -38,31 +65,26 @@ export const useInternetSpeed = () => {
 
     if (Platform.OS !== 'web') return;
 
-    // 2. Use navigator.connection (works on Chrome/Edge/Android WebView)
-    //    This is the most reliable method without CORS issues.
+    // 2. navigator.connection (Chrome / Edge / Android WebView)
+    //    Reliable, instant, no network request needed.
     const nav: any = navigator;
     const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
 
     if (connection && typeof connection.downlink === 'number') {
-      const currentSpeed = connection.downlink; // Mbps
-      const rounded = Math.round(currentSpeed * 10) / 10;
-      setSpeed(rounded);
-      setIsOffline(false);
-      setIsLowSpeed(rounded > 0 && rounded < SPEED_THRESHOLD_MBPS);
-      const newStatus: NetworkStatus = rounded === 0 ? 'offline' : rounded < SPEED_THRESHOLD_MBPS ? 'slow' : 'normal';
-      triggerPopup(newStatus);
+      applySpeed(connection.downlink);
 
-      // Also listen for connection changes
-      if (!connection._listenerAdded) {
-        connection._listenerAdded = true;
-        connection.addEventListener('change', () => checkSpeed());
+      // React to live network changes (e.g. switching WiFi → 4G)
+      if (!connection._clGuardListening) {
+        connection._clGuardListening = true;
+        connection.addEventListener('change', () => {
+          if (typeof connection.downlink === 'number') applySpeed(connection.downlink);
+        });
       }
       return;
     }
 
-    // 3. Fallback: no-cors latency test (Firefox / Safari / no Network Info API)
-    //    We fetch a tiny resource from our own origin to measure round-trip time.
-    //    Using /favicon.ico which always exists in Vite apps.
+    // 3. Fallback latency test against same-origin /favicon.ico
+    //    (Firefox / Safari — no Network Information API)
     try {
       const start = performance.now();
       const controller = new AbortController();
@@ -74,35 +96,33 @@ export const useInternetSpeed = () => {
       });
 
       clearTimeout(timeoutId);
-      const durationMs = performance.now() - start;
+      const ms = performance.now() - start;
 
-      // Heuristic: <200ms = fast, 200-800ms = normal, >800ms = slow
-      let estimatedSpeed: number;
-      if (durationMs < 200) estimatedSpeed = 10;
-      else if (durationMs < 500) estimatedSpeed = 4;
-      else if (durationMs < 800) estimatedSpeed = 2;
-      else estimatedSpeed = 0.8;
+      // Map latency → rough speed estimate:
+      //   <300ms  → good (5 Mbps+)
+      //   300-800ms → okay (1-2 Mbps)
+      //   800-2000ms → borderline (0.5-1 Mbps)
+      //   >2000ms → very slow (<0.5 Mbps)
+      let estimated: number;
+      if (ms < 300)       estimated = 5.0;
+      else if (ms < 800)  estimated = 1.5;
+      else if (ms < 2000) estimated = 0.6;
+      else                estimated = 0.3;
 
-      setSpeed(estimatedSpeed);
-      setIsOffline(false);
-      setIsLowSpeed(estimatedSpeed < SPEED_THRESHOLD_MBPS);
-
-      const newStatus: NetworkStatus = estimatedSpeed < SPEED_THRESHOLD_MBPS ? 'slow' : 'normal';
-      triggerPopup(newStatus);
+      applySpeed(estimated);
     } catch (error: any) {
       if (error?.name === 'AbortError') {
-        setSpeed(0.5);
-        setIsLowSpeed(true);
-        setIsOffline(false);
-        triggerPopup('slow');
+        // Timed out → definitely slow
+        applySpeed(0.2);
       } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
         setIsOffline(true);
         setIsLowSpeed(false);
         setSpeed(0);
         triggerPopup('offline');
       }
+      // Any other fetch error → ignore, don't show popup
     }
-  }, [triggerPopup]);
+  }, [applySpeed, triggerPopup]);
 
   useEffect(() => {
     checkSpeed();
@@ -120,6 +140,7 @@ export const useInternetSpeed = () => {
       window.addEventListener('offline', handleOffline);
     }
 
+    // Re-check every 30 seconds
     const interval = setInterval(checkSpeed, 30_000);
 
     return () => {
