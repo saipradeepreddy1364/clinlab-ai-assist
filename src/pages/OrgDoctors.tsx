@@ -150,7 +150,13 @@ const OrgDoctors = () => {
             </View>
           ) : filteredDoctors.length > 0 ? (
             filteredDoctors.map((d) => (
-              <View key={d.id} style={styles.doctorCard}>
+              <View 
+                key={d.id} 
+                style={[
+                  styles.doctorCard,
+                  activeMenu === d.id && { zIndex: 100 }
+                ]}
+              >
                 <View style={styles.cardHeader}>
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{d.full_name?.charAt(0)}</Text>
@@ -169,78 +175,41 @@ const OrgDoctors = () => {
                     </Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => setActiveMenu(d.id)}
+                    onPress={() => setActiveMenu(activeMenu === d.id ? null : d.id)}
                     style={styles.moreButton}
                   >
                     <MoreVertical size={20} color="#94A3B8" />
                   </TouchableOpacity>
 
-                  {/* Dropdown Menu Modal */}
-                  <Modal
-                    visible={activeMenu === d.id}
-                    transparent={true}
-                    animationType="fade"
-                    onRequestClose={() => setActiveMenu(null)}
-                  >
-                    <Pressable 
-                      style={styles.modalBackdrop} 
-                      onPress={() => setActiveMenu(null)}
-                    >
-                      <View style={styles.menuContainer}>
-                        <View style={styles.menuHeader}>
-                          <Text style={styles.menuTitle}>Doctor Actions</Text>
-                          <Text style={styles.menuSubtitle}>{d.full_name}</Text>
-                        </View>
-                        
-                        <TouchableOpacity 
-                          style={styles.menuItem}
-                          onPress={() => {
-                            setActiveMenu(null);
-                            handleBlockDoctor(d.id, d.status);
-                          }}
-                        >
-                          <View style={[styles.menuIconBox, { backgroundColor: d.status === 'blocked' ? '#F0FDF4' : '#FEF2F2' }]}>
-                            {d.status === 'blocked' ? (
-                              <CheckCircle2 size={18} color="#10B981" />
-                            ) : (
-                              <Ban size={18} color="#EF4444" />
-                            )}
-                          </View>
-                          <View>
-                            <Text style={[styles.menuText, { color: d.status === 'blocked' ? "#10B981" : "#EF4444" }]}>
-                              {d.status === 'blocked' ? 'Unblock Access' : 'Block Usage'}
-                            </Text>
-                            <Text style={styles.menuDesc}>
-                              {d.status === 'blocked' ? 'Restore clinical access' : 'Restrict temporary usage'}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                          style={styles.menuItem}
-                          onPress={() => {
-                            setActiveMenu(null);
-                            handleRemoveDoctor(d.id);
-                          }}
-                        >
-                          <View style={[styles.menuIconBox, { backgroundColor: '#FEF2F2' }]}>
-                            <UserMinus size={18} color="#EF4444" />
-                          </View>
-                          <View>
-                            <Text style={[styles.menuText, { color: "#EF4444" }]}>Remove from Org</Text>
-                            <Text style={styles.menuDesc}>Detach from your organization</Text>
-                          </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                          style={styles.cancelMenuButton}
-                          onPress={() => setActiveMenu(null)}
-                        >
-                          <Text style={styles.cancelMenuText}>Cancel</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </Pressable>
-                  </Modal>
+                  {/* Inline Dropdown Menu */}
+                  {activeMenu === d.id && (
+                    <View style={styles.inlineMenu}>
+                      <TouchableOpacity 
+                        style={styles.inlineMenuItem}
+                        onPress={() => handleBlockDoctor(d.id, d.status)}
+                      >
+                        {d.status === 'blocked' ? (
+                          <>
+                            <CheckCircle2 size={14} color="#10B981" />
+                            <Text style={[styles.inlineMenuText, { color: "#10B981" }]}>Unblock</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Ban size={14} color="#EF4444" />
+                            <Text style={[styles.inlineMenuText, { color: "#EF4444" }]}>Block</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                      <View style={styles.inlineDivider} />
+                      <TouchableOpacity 
+                        style={styles.inlineMenuItem}
+                        onPress={() => handleRemoveDoctor(d.id)}
+                      >
+                        <UserMinus size={14} color="#EF4444" />
+                        <Text style={[styles.inlineMenuText, { color: "#EF4444" }]}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.divider} />
@@ -405,78 +374,38 @@ const styles = StyleSheet.create({
     padding: 8,
     marginRight: -8,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  menuContainer: {
-    width: "100%",
-    maxWidth: 320,
+  inlineMenu: {
+    position: "absolute",
+    top: 0,
+    right: 40,
     backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.2,
-    shadowRadius: 30,
-    elevation: 25,
-  },
-  menuHeader: {
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  menuTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  menuSubtitle: {
-    fontSize: 13,
-    color: "#64748B",
-    marginTop: 2,
-  },
-  menuItem: {
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 8,
-    backgroundColor: "#F8FAFC",
+    padding: 4,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
   },
-  menuIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  inlineMenuItem: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  menuText: {
-    fontSize: 15,
+  inlineMenuText: {
+    fontSize: 12,
     fontWeight: "700",
   },
-  menuDesc: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 1,
-  },
-  cancelMenuButton: {
-    marginTop: 12,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
+  inlineDivider: {
+    width: 1,
+    height: 16,
     backgroundColor: "#F1F5F9",
-  },
-  cancelMenuText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#475569",
   },
   divider: {
     height: 1,
