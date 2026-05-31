@@ -29,9 +29,9 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'favicon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
-        name: 'ClinLab AI Assistant',
+        name: 'ClinLab Assistant',
         short_name: 'ClinLab',
-        description: 'Advanced AI Assistant for Dental Clinics',
+        description: 'Advanced Assistant for Dental Clinics',
         theme_color: '#0EA5E9',
         background_color: '#F8FAFC',
         display: 'standalone',

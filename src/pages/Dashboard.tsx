@@ -163,7 +163,7 @@ const Dashboard = () => {
                 style={styles.heroButton}
               >
                 <Sparkles size={14} color="#FFFFFF" />
-                <Text style={styles.heroButtonText}>AI Clinical Guide</Text>
+                <Text style={styles.heroButtonText}>Clinical Guide</Text>
               </TouchableOpacity>
             </View>
           </View>
