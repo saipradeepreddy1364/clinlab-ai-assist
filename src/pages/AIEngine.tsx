@@ -11,16 +11,13 @@ import {
 } from "react-native";
 import {
   ArrowRight,
-  FileText,
   ChevronDown,
   X,
-  FileSearch,
   ListChecks,
   RefreshCw,
   AlertCircle,
   CheckCircle2,
 } from "lucide-react-native";
-import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 import {
   fetchProcedures,
@@ -31,12 +28,7 @@ import {
 } from "@/lib/backendApi";
 
 const AIEngine = () => {
-  // ── Patient case ──────────────────────────────────────────────────────────
-  const [cases, setCases] = useState<any[]>([]);
-  const [selectedCase, setSelectedCase] = useState<any>(null);
-  const [showCasePicker, setShowCasePicker] = useState(false);
-  const [fileAnalysis, setFileAnalysis] = useState<string | null>(null);
-  const [fetchingFile, setFetchingFile] = useState(false);
+
 
   // ── Procedures from backend ───────────────────────────────────────────────
   const [proceduresMap, setProceduresMap] = useState<ProceduresResponse>({});
@@ -77,22 +69,7 @@ const AIEngine = () => {
     loadProcedures();
   }, []);
 
-  // ── Load patient cases ────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchCases = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("cases")
-        .select("*")
-        .eq("doctor_id", user.id)
-        .order("created_at", { ascending: false });
-      if (data) setCases(data);
-    };
-    fetchCases();
-  }, []);
+
 
   // Reset workflow when selection changes
   useEffect(() => {
@@ -126,76 +103,6 @@ const AIEngine = () => {
   }, [selectedProcedure, selectedSubtype]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleSelectCase = async (patientCase: any) => {
-    setSelectedCase(patientCase);
-    setShowCasePicker(false);
-    setFileAnalysis(null);
-    setFetchingFile(true);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: storageFiles } = await supabase.storage
-        .from("clinical-files")
-        .list(user.id);
-
-      if (storageFiles && storageFiles.length > 0) {
-        const sanitizedName = patientCase.patient_name
-          .replace(/\s+/g, "-")
-          .replace(/[^a-zA-Z0-9-]/g, "");
-        const patientFiles = storageFiles.filter((f) =>
-          f.name.toLowerCase().startsWith(sanitizedName.toLowerCase())
-        );
-
-        if (patientFiles.length > 0) {
-          const latestFile = patientFiles.sort(
-            (a, b) =>
-              new Date(b.created_at || 0).getTime() -
-              new Date(a.created_at || 0).getTime()
-          )[0];
-
-          const { data: urlData } = await supabase.storage
-            .from("clinical-files")
-            .createSignedUrl(`${user.id}/${latestFile.name}`, 3600);
-
-          if (urlData?.signedUrl) {
-            const ext = latestFile.name.split(".").pop()?.toLowerCase();
-            const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(
-              ext || ""
-            );
-            const fileType = isImage ? "radiograph/image" : "document/report";
-            setFileAnalysis(
-              `📎 Latest ${fileType} detected for ${patientCase.patient_name}\n\n` +
-                `File: ${latestFile.name.split("--").pop() || latestFile.name}\n` +
-                `Uploaded: ${new Date(
-                  latestFile.created_at || Date.now()
-                ).toLocaleDateString("en-IN", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}\n\n` +
-                `Based on the clinical record for Tooth ${patientCase.tooth_number} with diagnosis of "${patientCase.diagnosis}", ` +
-                `the uploaded ${fileType} has been linked to this case.`
-            );
-          } else {
-            setFileAnalysis(`No files found for ${patientCase.patient_name}.`);
-          }
-        } else {
-          setFileAnalysis(
-            `No reports uploaded yet for ${patientCase.patient_name}.`
-          );
-        }
-      } else {
-        setFileAnalysis(`No files found in storage.`);
-      }
-    } catch {
-      setFileAnalysis("Could not fetch patient files.");
-    } finally {
-      setFetchingFile(false);
-    }
-  };
 
   const handleGetWorkflow = async () => {
     if (!selectedProcedure) {
@@ -319,60 +226,6 @@ const AIEngine = () => {
           from the backend dataset.
         </Text>
 
-        {/* Patient Case Selector */}
-        <TouchableOpacity
-          style={styles.patientSelector}
-          onPress={() => setShowCasePicker(true)}
-        >
-          <FileSearch size={16} color="#8B5CF6" />
-          <Text style={styles.patientSelectorText}>
-            {selectedCase ? selectedCase.patient_name : "Select a Patient Case"}
-          </Text>
-          <ChevronDown size={16} color="#94A3B8" />
-        </TouchableOpacity>
-
-        {/* Patient Picker Modal */}
-        <Modal visible={showCasePicker} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalSheet}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Patient Case</Text>
-                <TouchableOpacity onPress={() => setShowCasePicker(false)}>
-                  <X size={20} color="#64748B" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView>
-                {cases.length === 0 ? (
-                  <Text style={styles.emptyPickerText}>
-                    No cases found. Add cases from the Records page.
-                  </Text>
-                ) : (
-                  cases.map((c) => (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={styles.casePickerItem}
-                      onPress={() => handleSelectCase(c)}
-                    >
-                      <View style={styles.casePickerAvatar}>
-                        <Text style={styles.casePickerAvatarText}>
-                          {c.patient_name?.charAt(0)}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.casePickerName}>
-                          {c.patient_name}
-                        </Text>
-                        <Text style={styles.casePickerMeta}>
-                          Tooth {c.tooth_number} · {c.diagnosis}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
 
         {/* Procedure Picker Modal */}
         <Modal visible={showProcPicker} transparent animationType="slide">
@@ -495,25 +348,6 @@ const AIEngine = () => {
           </View>
         </Modal>
 
-        {/* File Analysis Card */}
-        {(fetchingFile || fileAnalysis) && (
-          <View style={styles.fileAnalysisCard}>
-            <View style={styles.fileAnalysisHeader}>
-              <FileText size={14} color="#8B5CF6" />
-              <Text style={styles.fileAnalysisTitle}>Report Analysis</Text>
-            </View>
-            {fetchingFile ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <ActivityIndicator size="small" color="#8B5CF6" />
-                <Text style={styles.fileAnalysisText}>
-                  Fetching latest report...
-                </Text>
-              </View>
-            ) : (
-              <Text style={styles.fileAnalysisText}>{fileAnalysis}</Text>
-            )}
-          </View>
-        )}
 
         {/* Input Section */}
         <View style={styles.entrySection}>
@@ -719,35 +553,6 @@ const AIEngine = () => {
                       <Text style={styles.stepCurrentName}>
                         {step.current_step}
                       </Text>
-                      <View
-                        style={[
-                          styles.confidencePill,
-                          {
-                            backgroundColor:
-                              step.confidence >= 80
-                                ? "#DCFCE7"
-                                : step.confidence >= 50
-                                ? "#FEF3C7"
-                                : "#FEE2E2",
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.confidenceText,
-                            {
-                              color:
-                                step.confidence >= 80
-                                  ? "#15803D"
-                                  : step.confidence >= 50
-                                  ? "#B45309"
-                                  : "#B91C1C",
-                            },
-                          ]}
-                        >
-                          {step.confidence}%
-                        </Text>
-                      </View>
                     </View>
 
                     {/* Current step description */}
@@ -769,11 +574,6 @@ const AIEngine = () => {
                         </Text>
                       </View>
                     )}
-
-                    {/* Source badge */}
-                    <View style={styles.sourceBadge}>
-                      <Text style={styles.sourceText}>{step.source}</Text>
-                    </View>
                   </View>
                 </View>
               );
@@ -859,49 +659,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#EF4444",
   },
-  // ── Patient selector ──
-  patientSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  patientSelectorText: {
-    flex: 1,
-    fontSize: 14,
-    color: "#0F172A",
-    fontWeight: "500",
-  },
-  // ── File analysis ──
-  fileAnalysisCard: {
-    backgroundColor: "rgba(139,92,246,0.06)",
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(139,92,246,0.2)",
-    gap: 8,
-  },
-  fileAnalysisHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  fileAnalysisTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#8B5CF6",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  fileAnalysisText: {
-    fontSize: 13,
-    color: "#475569",
-    lineHeight: 20,
-  },
+
   // ── Entry section ──
   entrySection: {
     gap: 16,
@@ -1066,15 +824,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0F172A",
   },
-  confidencePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  confidenceText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
   stepDesc: {
     fontSize: 12,
     color: "#475569",
@@ -1093,18 +842,6 @@ const styles = StyleSheet.create({
   nextStepName: {
     fontWeight: "700",
     color: "#8B5CF6",
-  },
-  sourceBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#F1F5F9",
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  sourceText: {
-    fontSize: 10,
-    color: "#94A3B8",
-    textTransform: "capitalize",
   },
   // ── Workflow error card ──
   errorCard: {
